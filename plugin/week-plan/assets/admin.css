@@ -924,3 +924,59 @@
 	display: flex;
 	align-items: center;
 }
+
+/* ---------- 右键菜单 ---------- */
+
+.wp-menu {
+	position: absolute;
+	z-index: 10000;
+	min-width: 190px;
+	padding: 4px;
+	border: 1px solid var(--wp-line, #dcdcde);
+	border-radius: 6px;
+	background: #fff;
+	box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16);
+	font-family: 'Maple Mono NF CN', ui-monospace, SFMono-Regular, Menlo, Consolas,
+		'PingFang SC', 'Microsoft YaHei', sans-serif;
+}
+
+.wp-menu-head {
+	padding: 5px 9px 6px;
+	margin-bottom: 3px;
+	border-bottom: 1px solid #f0f0f1;
+	color: #787c82;
+	font-size: 11px;
+	line-height: 1.5;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.wp-menu-item {
+	display: block;
+	width: 100%;
+	padding: 5px 9px;
+	border: 0;
+	border-radius: 4px;
+	background: none;
+	color: #1d2327;
+	font-family: inherit;
+	font-size: 12.5px;
+	line-height: 1.7;
+	text-align: left;
+	cursor: pointer;
+}
+
+.wp-menu-item:hover {
+	background: #f0f6fc;
+	color: #2271b1;
+}
+
+.wp-menu-item.is-danger {
+	color: #b32d2e;
+}
+
+.wp-menu-item.is-danger:hover {
+	background: #fcf0f1;
+	color: #b32d2e;
+}

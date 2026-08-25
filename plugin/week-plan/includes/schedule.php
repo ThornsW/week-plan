@@ -414,3 +414,53 @@ function weekplan_batch_schedule( int $todo_id, string $from, string $to, array 
 		'skipped' => count( $dates ) - count( $fresh ),
 	);
 }
+
+/** 整体顺延一次最多挪多少天。 */
+const WEEKPLAN_SHIFT_LIMIT = 365;
+
+/**
+ * 把一个待办的排期整体挪 N 天(负数是提前)。
+ *
+ * 只挪**没做完**的那些。已经打过勾的日子是发生过的事实,顺延会把历史改掉 ——
+ * 「我落后了,把还没做的往后推」才是这个操作的本意。
+ *
+ * 放在右键菜单而不是拖拽上:拖拽必须是所见即所得的单格操作,否则一次误拖
+ * 就能打乱三个月的排期。
+ *
+ * @return array{shifted:int}|WP_Error
+ */
+function weekplan_shift_todo( int $todo_id, int $days ): array|WP_Error {
+	global $wpdb;
+
+	if ( null === weekplan_todo_summary( $todo_id ) ) {
+		return new WP_Error( 'weekplan_no_todo', '待办不存在。' );
+	}
+	if ( 0 === $days ) {
+		return array( 'shifted' => 0 );
+	}
+	if ( abs( $days ) > WEEKPLAN_SHIFT_LIMIT ) {
+		return new WP_Error(
+			'weekplan_shift_too_far',
+			sprintf( '一次最多挪 %d 天。', WEEKPLAN_SHIFT_LIMIT )
+		);
+	}
+
+	$table = weekplan_schedule_table();
+
+	// (todo_id, plan_date) 是唯一键,而 MySQL 是逐行更新的:往后挪时如果先动
+	// 早的那一行,它会撞上还没挪的晚的那一行。按方向排序更新可以避开。
+	$order = $days > 0 ? 'DESC' : 'ASC';
+
+	$affected = $wpdb->query(
+		$wpdb->prepare(
+			"UPDATE $table
+			    SET plan_date = DATE_ADD(plan_date, INTERVAL %d DAY)
+			  WHERE todo_id = %d AND done = 0
+			  ORDER BY plan_date $order",
+			$days,
+			$todo_id
+		)
+	);
+
+	return array( 'shifted' => (int) $affected );
+}

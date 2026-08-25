@@ -784,3 +784,152 @@
 		} );
 	} );
 }() );
+
+/*
+ * 右键菜单。
+ *
+ * 「整体顺延」放在这里而不是绑到拖拽上:拖拽必须是所见即所得的单格操作,
+ * 否则一次误拖就能打乱三个月的排期。
+ */
+( function () {
+	'use strict';
+
+	var config = window.weekplanData || {};
+	var menu = null;
+
+	function post( action, payload ) {
+		var body = new URLSearchParams();
+		body.set( 'action', 'weekplan_' + action );
+		body.set( 'nonce', config.nonce );
+		Object.keys( payload ).forEach( function ( key ) {
+			body.set( key, payload[ key ] );
+		} );
+
+		return fetch( config.ajaxUrl, {
+			method: 'POST',
+			credentials: 'same-origin',
+			body: body
+		} ).then( function ( r ) {
+			return r.json();
+		} ).then( function ( json ) {
+			if ( ! json || ! json.success ) {
+				throw new Error( ( json && json.data && json.data.message ) || '请求失败' );
+			}
+			return json.data || {};
+		} );
+	}
+
+	function closeMenu() {
+		if ( menu ) {
+			menu.remove();
+			menu = null;
+		}
+	}
+
+	function run( promise ) {
+		promise.then( function () {
+			window.location.reload();
+		} ).catch( function ( error ) {
+			window.alert( error.message );
+		} );
+	}
+
+	function shift( todoId, days ) {
+		run( post( 'shift', { todo_id: todoId, days: days } ) );
+	}
+
+	document.addEventListener( 'contextmenu', function ( event ) {
+		if ( ! event.target.closest ) {
+			return;
+		}
+		var el = event.target.closest( '.wp-card, .wp-item' );
+		if ( ! el || ! el.dataset.todo ) {
+			return;
+		}
+
+		event.preventDefault();
+		closeMenu();
+
+		var todoId = el.dataset.todo;
+		var scheduleId = el.dataset.schedule || '';
+		var title = el.querySelector( '.wp-card-title, .wp-item-title' );
+
+		menu = document.createElement( 'div' );
+		menu.className = 'wp-menu';
+		menu.style.left = event.pageX + 'px';
+		menu.style.top = event.pageY + 'px';
+
+		var head = document.createElement( 'div' );
+		head.className = 'wp-menu-head';
+		head.textContent = title ? title.textContent : '';
+		menu.appendChild( head );
+
+		function item( label, handler, danger ) {
+			var button = document.createElement( 'button' );
+			button.type = 'button';
+			button.className = 'wp-menu-item' + ( danger ? ' is-danger' : '' );
+			button.textContent = label;
+			button.addEventListener( 'click', function () {
+				closeMenu();
+				handler();
+			} );
+			menu.appendChild( button );
+		}
+
+		item( '未做的整体顺延 1 天', function () {
+			shift( todoId, 1 );
+		} );
+		item( '未做的整体顺延 7 天', function () {
+			shift( todoId, 7 );
+		} );
+		item( '自定义顺延…', function () {
+			var answer = window.prompt( '顺延几天?负数是提前。已经打过勾的日子不动。', '3' );
+			if ( null === answer || '' === answer.trim() ) {
+				return;
+			}
+			var days = parseInt( answer, 10 );
+			if ( isNaN( days ) ) {
+				window.alert( '要填一个整数。' );
+				return;
+			}
+			shift( todoId, days );
+		} );
+
+		if ( scheduleId ) {
+			item( '取消这一天的排期', function () {
+				run( post( 'remove', { schedule_id: scheduleId } ) );
+			} );
+		}
+
+		item( '删除这条待办', function () {
+			if ( window.confirm( '删掉这条待办?它的所有排期也会一起消失,不能撤销。' ) ) {
+				run( post( 'delete', { todo_id: todoId } ) );
+			}
+		}, true );
+
+		document.body.appendChild( menu );
+
+		// 贴到窗口边上时往回收一点,别被裁掉
+		var box = menu.getBoundingClientRect();
+		if ( box.right > window.innerWidth ) {
+			menu.style.left = ( event.pageX - box.width ) + 'px';
+		}
+		if ( box.bottom > window.innerHeight ) {
+			menu.style.top = ( event.pageY - box.height ) + 'px';
+		}
+	} );
+
+	document.addEventListener( 'click', function ( event ) {
+		if ( menu && ! event.target.closest( '.wp-menu' ) ) {
+			closeMenu();
+		}
+	} );
+
+	document.addEventListener( 'keydown', function ( event ) {
+		if ( 'Escape' === event.key ) {
+			closeMenu();
+		}
+	} );
+
+	window.addEventListener( 'scroll', closeMenu, true );
+}() );
