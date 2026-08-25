@@ -1,0 +1,119 @@
+/* 骨架样式。真正的视觉设计(点亮/未点亮的卡片配色)在原型阶段做。 */
+
+.weekplan {
+	margin-right: 20px;
+}
+
+.weekplan-bar {
+	display: flex;
+	align-items: center;
+	gap: 16px;
+	flex-wrap: wrap;
+	margin: 12px 0 16px;
+}
+
+.weekplan-title {
+	margin: 0;
+	padding: 0;
+	font-size: 20px;
+	line-height: 1.4;
+}
+
+.weekplan-range {
+	color: #50575e;
+	font-size: 13px;
+}
+
+.weekplan-nav {
+	margin-left: auto;
+	display: flex;
+	gap: 6px;
+}
+
+/* 三栏:左侧待办清单 / 中间纵向的一周 / 右侧详情。
+   中间那栏用 minmax(0, 1fr),否则长标题会把整个网格撑宽。 */
+.weekplan-layout {
+	display: grid;
+	grid-template-columns: 260px minmax(0, 1fr) 300px;
+	gap: 16px;
+	align-items: start;
+}
+
+.weekplan-side,
+.weekplan-detail,
+.weekplan-day {
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 4px;
+}
+
+.weekplan-panel-head {
+	padding: 10px 12px;
+	border-bottom: 1px solid #f0f0f1;
+	font-weight: 600;
+	font-size: 13px;
+}
+
+.weekplan-empty {
+	margin: 0;
+	padding: 16px 12px;
+	color: #8c8f94;
+	font-size: 13px;
+}
+
+/* 一周是纵向排列的 7 个日期分组,不是横向 7 列。
+   横向每列只有百来像素,放不下卡片。 */
+.weekplan-week {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.weekplan-day-head {
+	display: flex;
+	align-items: baseline;
+	gap: 8px;
+	padding: 8px 12px;
+	border-bottom: 1px solid #f0f0f1;
+}
+
+.weekplan-day-name {
+	font-weight: 600;
+	font-size: 13px;
+}
+
+.weekplan-day-date {
+	color: #8c8f94;
+	font-size: 12px;
+}
+
+.weekplan-day-body {
+	min-height: 44px;
+	padding: 8px 12px;
+}
+
+.weekplan-day.is-today {
+	border-color: #2271b1;
+}
+
+.weekplan-day.is-past .weekplan-day-head {
+	opacity: 0.6;
+}
+
+.weekplan-today-badge {
+	margin-left: auto;
+	padding: 1px 8px;
+	border-radius: 10px;
+	background: #2271b1;
+	color: #fff;
+	font-size: 11px;
+}
+
+@media (max-width: 1100px) {
+	.weekplan-layout {
+		grid-template-columns: 220px minmax(0, 1fr);
+	}
+	.weekplan-detail {
+		grid-column: 1 / -1;
+	}
+}

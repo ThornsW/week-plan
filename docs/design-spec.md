@@ -259,8 +259,8 @@ WordPress 的数据卷不进 git。开发完成后清理整个 `dev/` 目录。
 
 ## 11. 待办事项
 
-- [ ] 写 `AGENTS.md`，沿用 TX_VPS 项目的写法，界定本项目边界与线上操作规范
-- [ ] 搭 `dev/docker-compose.yml`
+- [x] 写 `AGENTS.md`
+- [x] 开发环境(改为服务器上的隔离 WordPress + SSH 隧道,不用 Docker,见 dev/README.md)
 - [x] 确认服务器 WordPress 与 PHP 的实际版本（2026-08-24 只读实测：WP 7.0.2、PHP 8.3.22、MariaDB 10.6.20）
-- [ ] 核实 Docker Hub 上 WordPress 7.0 对应的镜像标签，本地环境须对齐大版本
+- [x] 插件骨架:建表、注册类型、后台菜单、三栏 + 7 个日期分组
 - [ ] 拖拽 + 配色原型
