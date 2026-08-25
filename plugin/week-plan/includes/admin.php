@@ -149,9 +149,13 @@ function weekplan_render_sidebar_item( array $todo ): void {
 			$bits[] = '截止 ' . $due->format( 'n/j' );
 		}
 	}
+	// data-tags 是给左栏二级分组用的。id 的顺序和下面小签的顺序一一对应,
+	// 前端按下标取名字和颜色,不必再往页面里塞一份标签表。
+	$tag_ids = implode( ',', array_column( $todo['tags'], 'id' ) );
 	?>
 	<article class="wp-item" draggable="true"
 		data-todo="<?php echo esc_attr( (string) $todo['id'] ); ?>"
+		data-tags="<?php echo esc_attr( $tag_ids ); ?>"
 		style="--wp-accent: <?php echo esc_attr( $todo['accent'] ); ?>">
 		<div class="wp-item-title"><?php echo esc_html( $todo['title'] ); ?></div>
 		<div class="wp-item-meta"><?php echo esc_html( implode( ' · ', $bits ) ); ?></div>
@@ -163,6 +167,20 @@ function weekplan_render_sidebar_item( array $todo ): void {
 			</div>
 		<?php endif; ?>
 	</article>
+	<?php
+}
+
+/**
+ * 左栏两组各自的「按标签分组」开关。
+ *
+ * 开关状态存在浏览器里,服务器不知道,所以这里一律渲染成关闭态,由前端在
+ * 加载时按 localStorage 拨过去。开关只影响这一栏怎么排,和地址栏上的标签
+ * 筛选是两回事。
+ */
+function weekplan_render_split_toggle( string $key ): void {
+	?>
+	<button type="button" class="wp-split" data-split="<?php echo esc_attr( $key ); ?>"
+		aria-pressed="false" title="按标签分组显示">分组</button>
 	<?php
 }
 
@@ -220,29 +238,34 @@ function weekplan_render_admin_page(): void {
 				<div class="wp-group">
 					<div class="wp-group-head">
 						待办
+						<?php weekplan_render_split_toggle( 'scheduled' ); ?>
 						<button type="button" class="wp-new-todo" title="新建待办">+ 新建</button>
 					</div>
-					<div class="wp-group-body">
-						<?php if ( $sidebar['scheduled'] ) : ?>
-							<?php foreach ( $sidebar['scheduled'] as $todo ) : ?>
-								<?php weekplan_render_sidebar_item( $todo ); ?>
-							<?php endforeach; ?>
-						<?php else : ?>
-							<p class="weekplan-empty">还没有排过期的待办。</p>
-						<?php endif; ?>
+					<div class="wp-group-body" data-split="scheduled">
+						<div class="wp-flat">
+							<?php if ( $sidebar['scheduled'] ) : ?>
+								<?php foreach ( $sidebar['scheduled'] as $todo ) : ?>
+									<?php weekplan_render_sidebar_item( $todo ); ?>
+								<?php endforeach; ?>
+							<?php else : ?>
+								<p class="weekplan-empty">还没有排过期的待办。</p>
+							<?php endif; ?>
+						</div>
 					</div>
 				</div>
 
 				<details class="wp-group" open>
-					<summary>未来计划 · <?php echo count( $sidebar['unscheduled'] ); ?> 条</summary>
-					<div class="wp-group-body">
-						<?php if ( $sidebar['unscheduled'] ) : ?>
-							<?php foreach ( $sidebar['unscheduled'] as $todo ) : ?>
-								<?php weekplan_render_sidebar_item( $todo ); ?>
-							<?php endforeach; ?>
-						<?php else : ?>
-							<p class="weekplan-empty">空的。</p>
-						<?php endif; ?>
+					<summary>未来计划 · <?php echo count( $sidebar['unscheduled'] ); ?> 条<?php weekplan_render_split_toggle( 'unscheduled' ); ?></summary>
+					<div class="wp-group-body" data-split="unscheduled">
+						<div class="wp-flat">
+							<?php if ( $sidebar['unscheduled'] ) : ?>
+								<?php foreach ( $sidebar['unscheduled'] as $todo ) : ?>
+									<?php weekplan_render_sidebar_item( $todo ); ?>
+								<?php endforeach; ?>
+							<?php else : ?>
+								<p class="weekplan-empty">空的。</p>
+							<?php endif; ?>
+						</div>
 					</div>
 				</details>
 			</aside>

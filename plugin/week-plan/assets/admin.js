@@ -66,7 +66,8 @@
 	}
 
 	function updateProgress( todoId, doneDays ) {
-		var item = document.querySelector( '.wp-item[data-todo="' + todoId + '"] .wp-item-meta' );
+		// 只改平铺列表里的那条;按标签分组时的克隆件由分组那块自己跟上
+		var item = document.querySelector( '.wp-flat .wp-item[data-todo="' + todoId + '"] .wp-item-meta' );
 		if ( ! item ) {
 			return;
 		}
@@ -333,7 +334,7 @@
 
 	/* 保存后侧栏那条要跟着变(标题、进度、标签都可能改了) */
 	function replaceSidebarItem( todoId, html ) {
-		var old = document.querySelector( '.wp-item[data-todo="' + todoId + '"]' );
+		var old = document.querySelector( '.wp-flat .wp-item[data-todo="' + todoId + '"]' );
 		if ( ! old || ! html ) {
 			return;
 		}
@@ -401,10 +402,8 @@
 		}
 
 		post( 'create', { title: title } ).then( function ( data ) {
-			// 新待办没有排期,落在「未来计划」里
-			var box = document.querySelector( '.wp-group[open] .wp-group-body, details.wp-group .wp-group-body' );
-			var groups = document.querySelectorAll( 'details.wp-group' );
-			var target = groups.length ? groups[ groups.length - 1 ].querySelector( '.wp-group-body' ) : box;
+			// 新待办没有排期,落在「未来计划」里。塞进平铺列表,分组视图会自己跟上。
+			var target = document.querySelector( '.wp-group-body[data-split="unscheduled"] .wp-flat' );
 			if ( target ) {
 				var empty = target.querySelector( '.weekplan-empty' );
 				if ( empty ) {
@@ -994,4 +993,217 @@
 			window.console && console.error( '[week-plan]', error );
 		} );
 	} );
+}() );
+
+/*
+ * 左栏的二级标签分组。
+ *
+ * 平铺列表是唯一的真相 —— 服务器只渲染它一份。开了分组就把平铺整个藏起来,
+ * 按标签克隆出一份二级 <details>。一条待办挂几个标签就克隆几份,所以二级标题
+ * 上的数字是「这个标签下有几条」,不是待办条数。
+ *
+ * 克隆件靠 MutationObserver 跟着源头走:改标题、加标签、新建、删除都会动到
+ * 平铺列表,观察到就重新派生一次 —— 不必在每个改动的地方各记得刷一次。
+ */
+( function () {
+	'use strict';
+
+	var UNTAGGED = '0';
+	var groups = document.querySelectorAll( '.wp-group-body[data-split]' );
+	if ( ! groups.length || ! window.MutationObserver ) {
+		return;
+	}
+
+	/* 隐私窗口里 localStorage 会直接抛异常,读写都包起来。记不住不影响功能。 */
+	function remember( key, value ) {
+		try {
+			window.localStorage.setItem( 'weekplan.' + key, value );
+		} catch ( error ) {
+			window.console && console.warn( '[week-plan] 状态没存下:', error );
+		}
+	}
+
+	function recall( key, fallback ) {
+		try {
+			var value = window.localStorage.getItem( 'weekplan.' + key );
+			return null === value ? fallback : value;
+		} catch ( error ) {
+			return fallback;
+		}
+	}
+
+	function isOn( key ) {
+		return 'on' === recall( 'split.' + key, 'off' );
+	}
+
+	/* 二级分组默认展开 —— 收起来是明确点过的,才记成 closed。 */
+	function isOpen( key, tagId ) {
+		return 'closed' !== recall( 'taggroup.' + key + '.' + tagId, 'open' );
+	}
+
+	/* 一条待办属于哪几个标签。data-tags 里的 id 和小签一一对应。 */
+	function tagsOf( item ) {
+		var ids = ( item.dataset.tags || '' ).split( ',' ).filter( Boolean );
+		var chips = item.querySelectorAll( '.wp-tag' );
+
+		if ( ! ids.length ) {
+			return [ { id: UNTAGGED, name: '无标签', color: '' } ];
+		}
+
+		return ids.map( function ( id, index ) {
+			var chip = chips[ index ];
+			return {
+				id: id,
+				name: chip ? chip.textContent : '#' + id,
+				color: chip ? chip.style.getPropertyValue( '--wp-tag' ).trim() : ''
+			};
+		} );
+	}
+
+	function bucketize( flat ) {
+		var order = [];
+		var buckets = {};
+
+		Array.prototype.forEach.call( flat.querySelectorAll( '.wp-item' ), function ( item ) {
+			tagsOf( item ).forEach( function ( tag ) {
+				if ( ! buckets[ tag.id ] ) {
+					buckets[ tag.id ] = { tag: tag, items: [] };
+					order.push( tag.id );
+				}
+				buckets[ tag.id ].items.push( item );
+			} );
+		} );
+
+		// 按标签名排,和左栏标签区一致;「无标签」永远垫底
+		order.sort( function ( a, b ) {
+			if ( a === UNTAGGED || b === UNTAGGED ) {
+				return a === UNTAGGED ? 1 : -1;
+			}
+			return buckets[ a ].tag.name.localeCompare( buckets[ b ].tag.name, 'zh-Hans-CN' );
+		} );
+
+		return order.map( function ( id ) {
+			return buckets[ id ];
+		} );
+	}
+
+	function subgroup( key, bucket ) {
+		var box = document.createElement( 'details' );
+		box.className = 'wp-subgroup';
+		box.dataset.tag = bucket.tag.id;
+		box.open = isOpen( key, bucket.tag.id );
+
+		var head = document.createElement( 'summary' );
+
+		// 「无标签」也占一个色点的位置,空心的 —— 不然那一行的名字比别人靠左
+		var dot = document.createElement( 'span' );
+		dot.className = bucket.tag.color ? 'wp-dot' : 'wp-dot wp-dot-none';
+		if ( bucket.tag.color ) {
+			dot.style.setProperty( '--wp-tag', bucket.tag.color );
+		}
+		head.appendChild( dot );
+
+		var name = document.createElement( 'span' );
+		name.className = 'wp-subgroup-name';
+		name.textContent = bucket.tag.name;
+		head.appendChild( name );
+
+		var count = document.createElement( 'span' );
+		count.className = 'wp-subgroup-count';
+		count.textContent = bucket.items.length;
+		head.appendChild( count );
+
+		box.appendChild( head );
+
+		var body = document.createElement( 'div' );
+		body.className = 'wp-subgroup-body';
+		bucket.items.forEach( function ( item ) {
+			body.appendChild( item.cloneNode( true ) );
+		} );
+		box.appendChild( body );
+
+		box.addEventListener( 'toggle', function () {
+			remember( 'taggroup.' + key + '.' + bucket.tag.id, box.open ? 'open' : 'closed' );
+		} );
+
+		return box;
+	}
+
+	function render( group ) {
+		var key = group.dataset.split;
+		var flat = group.querySelector( '.wp-flat' );
+		var old = group.querySelector( '.wp-grouped' );
+		var on = isOn( key );
+
+		if ( old ) {
+			old.remove();
+		}
+
+		var button = document.querySelector( '.wp-split[data-split="' + key + '"]' );
+		if ( button ) {
+			button.setAttribute( 'aria-pressed', on ? 'true' : 'false' );
+		}
+
+		if ( ! on ) {
+			flat.hidden = false;
+			return;
+		}
+
+		var buckets = bucketize( flat );
+		// 一条都没有时让平铺的空状态露着 —— 它那句话比「空的」说得更准
+		flat.hidden = buckets.length > 0;
+		if ( ! buckets.length ) {
+			return;
+		}
+
+		var box = document.createElement( 'div' );
+		box.className = 'wp-grouped';
+		buckets.forEach( function ( bucket ) {
+			box.appendChild( subgroup( key, bucket ) );
+		} );
+		group.appendChild( box );
+	}
+
+	function renderAll() {
+		Array.prototype.forEach.call( groups, render );
+	}
+
+	// 一次改动会连着触发好几条 mutation,攒到下一帧只重画一次
+	var pending = false;
+	var watcher = new window.MutationObserver( function () {
+		if ( pending ) {
+			return;
+		}
+		pending = true;
+		window.requestAnimationFrame( function () {
+			pending = false;
+			renderAll();
+		} );
+	} );
+
+	document.addEventListener( 'click', function ( event ) {
+		if ( ! event.target.closest ) {
+			return;
+		}
+		var button = event.target.closest( '.wp-split' );
+		if ( ! button ) {
+			return;
+		}
+		// 「未来计划」的开关长在 <summary> 里,不拦住就会顺手把整组折起来
+		event.preventDefault();
+
+		var key = button.dataset.split;
+		remember( 'split.' + key, isOn( key ) ? 'off' : 'on' );
+		renderAll();
+	} );
+
+	Array.prototype.forEach.call( groups, function ( group ) {
+		watcher.observe( group.querySelector( '.wp-flat' ), {
+			childList: true,
+			subtree: true,
+			characterData: true
+		} );
+	} );
+
+	renderAll();
 }() );
