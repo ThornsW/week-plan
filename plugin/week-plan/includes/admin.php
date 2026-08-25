@@ -207,7 +207,10 @@ function weekplan_render_admin_page(): void {
 				<?php endif; ?>
 
 				<div class="wp-group">
-					<div class="wp-group-head">待办</div>
+					<div class="wp-group-head">
+						待办
+						<button type="button" class="wp-new-todo" title="新建待办">+ 新建</button>
+					</div>
 					<div class="wp-group-body">
 						<?php if ( $sidebar['scheduled'] ) : ?>
 							<?php foreach ( $sidebar['scheduled'] as $todo ) : ?>
@@ -259,9 +262,8 @@ function weekplan_render_admin_page(): void {
 				<?php endforeach; ?>
 			</main>
 
-			<aside class="weekplan-detail">
-				<div class="wp-group-head">详情</div>
-				<p class="weekplan-empty">详情编辑在下一步做。现在先验证拖拽和配色。</p>
+			<aside class="weekplan-detail" id="weekplan-detail">
+				<?php weekplan_render_detail_empty(); ?>
 			</aside>
 		</div>
 	</div>

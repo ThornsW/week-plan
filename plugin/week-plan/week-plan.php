@@ -25,8 +25,10 @@ require_once WEEKPLAN_DIR . 'includes/schema.php';
 require_once WEEKPLAN_DIR . 'includes/types.php';
 require_once WEEKPLAN_DIR . 'includes/dates.php';
 require_once WEEKPLAN_DIR . 'includes/schedule.php';
+require_once WEEKPLAN_DIR . 'includes/todo.php';
 require_once WEEKPLAN_DIR . 'includes/ajax.php';
 require_once WEEKPLAN_DIR . 'includes/admin.php';
+require_once WEEKPLAN_DIR . 'includes/detail.php';
 
 /**
  * 内容类型和分类法在前后台都要注册。

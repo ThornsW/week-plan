@@ -281,3 +281,303 @@
 		} ).catch( fail );
 	} );
 }() );
+
+/*
+ * 详情栏。
+ *
+ * 每个字段各自保存(改完即存),没有「保存」按钮 —— 个人工具里多一次点击
+ * 就是多一次摩擦。文本框会防抖,不然每敲一个字都发一次请求。
+ */
+( function () {
+	'use strict';
+
+	var config = window.weekplanData || {};
+	var panel = document.getElementById( 'weekplan-detail' );
+	if ( ! panel ) {
+		return;
+	}
+
+	var noteTimer = null;
+
+	function post( action, payload ) {
+		var body = new URLSearchParams();
+		body.set( 'action', 'weekplan_' + action );
+		body.set( 'nonce', config.nonce );
+		Object.keys( payload ).forEach( function ( key ) {
+			body.set( key, payload[ key ] );
+		} );
+
+		return fetch( config.ajaxUrl, {
+			method: 'POST',
+			credentials: 'same-origin',
+			body: body
+		} ).then( function ( response ) {
+			return response.json();
+		} ).then( function ( json ) {
+			if ( ! json || ! json.success ) {
+				throw new Error( ( json && json.data && json.data.message ) || '请求失败' );
+			}
+			return json.data || {};
+		} );
+	}
+
+	function complain( error ) {
+		window.console && console.error( '[week-plan]', error );
+		window.alert( '没保存成功:' + error.message );
+	}
+
+	function currentTodo() {
+		var box = panel.querySelector( '[data-todo]' );
+		return box ? box.dataset.todo : '';
+	}
+
+	/* 保存后侧栏那条要跟着变(标题、进度、标签都可能改了) */
+	function replaceSidebarItem( todoId, html ) {
+		var old = document.querySelector( '.wp-item[data-todo="' + todoId + '"]' );
+		if ( ! old || ! html ) {
+			return;
+		}
+		var holder = document.createElement( 'div' );
+		holder.innerHTML = html.trim();
+		var fresh = holder.firstElementChild;
+		if ( fresh ) {
+			old.replaceWith( fresh );
+		}
+	}
+
+	function save( field, value ) {
+		var todoId = currentTodo();
+		if ( ! todoId ) {
+			return Promise.resolve( {} );
+		}
+		return post( 'save', { todo_id: todoId, field: field, value: value } )
+			.then( function ( data ) {
+				replaceSidebarItem( todoId, data.item_html );
+				return data;
+			} )
+			.catch( complain );
+	}
+
+	function openTodo( todoId ) {
+		document.querySelectorAll( '.is-selected' ).forEach( function ( el ) {
+			el.classList.remove( 'is-selected' );
+		} );
+		document.querySelectorAll( '[data-todo="' + todoId + '"]' ).forEach( function ( el ) {
+			if ( el.classList.contains( 'wp-card' ) || el.classList.contains( 'wp-item' ) ) {
+				el.classList.add( 'is-selected' );
+			}
+		} );
+
+		post( 'detail', { todo_id: todoId } ).then( function ( data ) {
+			panel.innerHTML = data.html || '';
+		} ).catch( complain );
+	}
+
+	/* ---------- 选中 ---------- */
+
+	document.addEventListener( 'click', function ( event ) {
+		if ( ! event.target.closest ) {
+			return;
+		}
+		// 勾和详情栏内部的点击不算「选中某条待办」
+		if ( event.target.closest( '.wp-check' ) || event.target.closest( '#weekplan-detail' ) ) {
+			return;
+		}
+		var el = event.target.closest( '.wp-card, .wp-item' );
+		if ( el && el.dataset.todo ) {
+			openTodo( el.dataset.todo );
+		}
+	} );
+
+	/* ---------- 新建 ---------- */
+
+	document.addEventListener( 'click', function ( event ) {
+		if ( ! event.target.closest || ! event.target.closest( '.wp-new-todo' ) ) {
+			return;
+		}
+		var title = window.prompt( '新建待办,叫什么?' );
+		if ( null === title || '' === title.trim() ) {
+			return;
+		}
+
+		post( 'create', { title: title } ).then( function ( data ) {
+			// 新待办没有排期,落在「未来计划」里
+			var box = document.querySelector( '.wp-group[open] .wp-group-body, details.wp-group .wp-group-body' );
+			var groups = document.querySelectorAll( 'details.wp-group' );
+			var target = groups.length ? groups[ groups.length - 1 ].querySelector( '.wp-group-body' ) : box;
+			if ( target ) {
+				var empty = target.querySelector( '.weekplan-empty' );
+				if ( empty ) {
+					empty.remove();
+				}
+				var holder = document.createElement( 'div' );
+				holder.innerHTML = ( data.item_html || '' ).trim();
+				if ( holder.firstElementChild ) {
+					target.prepend( holder.firstElementChild );
+				}
+			}
+			panel.innerHTML = data.detail_html || '';
+			var titleInput = panel.querySelector( '[data-field="title"]' );
+			if ( titleInput ) {
+				titleInput.focus();
+				titleInput.select();
+			}
+		} ).catch( complain );
+	} );
+
+	/* ---------- 字段保存 ---------- */
+
+	panel.addEventListener( 'change', function ( event ) {
+		var field = event.target.dataset && event.target.dataset.field;
+		if ( ! field || 'note' === field ) {
+			return;
+		}
+		save( field, event.target.value );
+	} );
+
+	panel.addEventListener( 'input', function ( event ) {
+		if ( 'note' !== ( event.target.dataset && event.target.dataset.field ) ) {
+			return;
+		}
+		var value = event.target.value;
+		window.clearTimeout( noteTimer );
+		noteTimer = window.setTimeout( function () {
+			save( 'note', value );
+		}, 700 );
+	} );
+
+	/* ---------- 结项 / 删除 ---------- */
+
+	panel.addEventListener( 'click', function ( event ) {
+		var finish = event.target.closest( '.wp-finish' );
+		if ( finish ) {
+			var turningOn = ! finish.classList.contains( 'is-on' );
+			finish.classList.toggle( 'is-on', turningOn );
+			finish.textContent = turningOn ? '已结项 · 点击恢复' : '标记为结项';
+			save( 'finished', turningOn ? '1' : '0' ).then( function () {
+				document.querySelectorAll( '.wp-card[data-todo="' + currentTodo() + '"]' )
+					.forEach( function ( card ) {
+						card.classList.toggle( 'is-finished', turningOn );
+					} );
+			} );
+			return;
+		}
+
+		var del = event.target.closest( '.wp-del-todo' );
+		if ( del ) {
+			var todoId = currentTodo();
+			if ( ! todoId || ! window.confirm( '删掉这条待办?它的所有排期也会一起消失,不能撤销。' ) ) {
+				return;
+			}
+			post( 'delete', { todo_id: todoId } ).then( function () {
+				document.querySelectorAll( '[data-todo="' + todoId + '"]' ).forEach( function ( el ) {
+					if ( el.classList.contains( 'wp-card' ) || el.classList.contains( 'wp-item' ) ) {
+						el.remove();
+					}
+				} );
+				panel.innerHTML = '<div class="wp-group wp-detail"><div class="wp-group-head">详情</div>' +
+					'<p class="weekplan-empty">点一条待办,在这里编辑。</p></div>';
+			} ).catch( complain );
+		}
+	} );
+
+	/* ---------- 标签 ---------- */
+
+	function tagNames() {
+		return Array.prototype.map.call(
+			panel.querySelectorAll( '.wp-tag-chip' ),
+			function ( chip ) {
+				return chip.dataset.name;
+			}
+		);
+	}
+
+	function saveTags() {
+		save( 'tags', tagNames().join( '\n' ) ).then( function () {
+			// 标签变了,卡片上的色带和小签也要重画 —— 重新拉一次详情最省事
+			openTodo( currentTodo() );
+		} );
+	}
+
+	panel.addEventListener( 'keydown', function ( event ) {
+		if ( 'Enter' !== event.key ) {
+			return;
+		}
+
+		var tagInput = event.target.closest( '.wp-tag-input' );
+		if ( tagInput ) {
+			event.preventDefault();
+			var name = tagInput.value.trim();
+			if ( '' === name || tagNames().indexOf( name ) !== -1 ) {
+				tagInput.value = '';
+				return;
+			}
+			var chips = panel.querySelector( '.wp-tag-chips' );
+			var chip = document.createElement( 'span' );
+			chip.className = 'wp-tag wp-tag-chip';
+			chip.dataset.name = name;
+			chip.textContent = name;
+			chip.insertAdjacentHTML( 'beforeend', '<button type="button" class="wp-tag-x" title="移除">×</button>' );
+			chips.appendChild( chip );
+			tagInput.value = '';
+			saveTags();
+			return;
+		}
+
+		var subInput = event.target.closest( '.wp-sub-input' );
+		if ( subInput ) {
+			event.preventDefault();
+			var text = subInput.value.trim();
+			if ( '' === text ) {
+				return;
+			}
+			var list = panel.querySelector( '.wp-subtasks' );
+			var li = document.createElement( 'li' );
+			li.className = 'wp-subtask';
+			li.innerHTML = '<button type="button" class="wp-check wp-sub-check" aria-pressed="false"></button>' +
+				'<span class="wp-subtask-text"></span>' +
+				'<button type="button" class="wp-sub-x" title="删除">×</button>';
+			li.querySelector( '.wp-subtask-text' ).textContent = text;
+			list.appendChild( li );
+			subInput.value = '';
+			saveSubtasks();
+		}
+	} );
+
+	panel.addEventListener( 'click', function ( event ) {
+		var remove = event.target.closest( '.wp-tag-x' );
+		if ( remove ) {
+			remove.closest( '.wp-tag-chip' ).remove();
+			saveTags();
+			return;
+		}
+
+		var subCheck = event.target.closest( '.wp-sub-check' );
+		if ( subCheck ) {
+			var on = 'true' === subCheck.getAttribute( 'aria-pressed' );
+			subCheck.setAttribute( 'aria-pressed', on ? 'false' : 'true' );
+			subCheck.closest( '.wp-subtask' ).classList.toggle( 'is-done', ! on );
+			saveSubtasks();
+			return;
+		}
+
+		var subRemove = event.target.closest( '.wp-sub-x' );
+		if ( subRemove ) {
+			subRemove.closest( '.wp-subtask' ).remove();
+			saveSubtasks();
+		}
+	} );
+
+	function saveSubtasks() {
+		var items = Array.prototype.map.call(
+			panel.querySelectorAll( '.wp-subtask' ),
+			function ( li ) {
+				return {
+					text: li.querySelector( '.wp-subtask-text' ).textContent,
+					done: 'true' === li.querySelector( '.wp-sub-check' ).getAttribute( 'aria-pressed' )
+				};
+			}
+		);
+		save( 'subtasks', JSON.stringify( items ) );
+	}
+}() );

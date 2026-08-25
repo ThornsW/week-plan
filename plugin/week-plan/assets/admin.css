@@ -444,3 +444,240 @@
 		grid-column: 1 / -1;
 	}
 }
+
+/* ---------- 详情栏 ---------- */
+
+.wp-detail .wp-group-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.wp-new-todo,
+.wp-del-todo {
+	margin-left: auto;
+	padding: 1px 9px;
+	border: 1px solid var(--wp-line);
+	border-radius: 4px;
+	background: #fff;
+	font-family: inherit;
+	font-size: 11.5px;
+	line-height: 1.7;
+	cursor: pointer;
+}
+
+.wp-new-todo {
+	border-color: #c5d9ec;
+	color: var(--wp-blue);
+}
+
+.wp-new-todo:hover {
+	background: #f0f6fc;
+}
+
+.wp-del-todo {
+	color: #b32d2e;
+	border-color: #f3c5c6;
+}
+
+.wp-del-todo:hover {
+	background: #fcf0f1;
+}
+
+.wp-detail-body {
+	display: flex;
+	flex-direction: column;
+	gap: 13px;
+}
+
+.wp-field {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	min-width: 0;
+}
+
+.wp-field-row {
+	display: flex;
+	gap: 9px;
+}
+
+.wp-field-row .wp-field {
+	flex: 1;
+}
+
+.wp-label {
+	color: var(--wp-dim);
+	font-size: 11px;
+	letter-spacing: 0.04em;
+}
+
+.wp-input {
+	width: 100%;
+	box-sizing: border-box;
+	padding: 5px 8px;
+	border: 1px solid var(--wp-line);
+	border-radius: 4px;
+	background: #fff;
+	font-family: inherit;
+	font-size: 12.5px;
+	line-height: 1.7;
+	color: var(--wp-ink);
+}
+
+.wp-input:focus {
+	border-color: var(--wp-blue);
+	outline: none;
+	box-shadow: 0 0 0 1px var(--wp-blue);
+}
+
+.wp-note {
+	resize: vertical;
+	line-height: 1.75;
+	tab-size: 4;
+}
+
+.wp-finish {
+	padding: 5px 10px;
+	border: 1px solid var(--wp-line);
+	border-radius: 4px;
+	background: #fff;
+	font-family: inherit;
+	font-size: 12px;
+	line-height: 1.7;
+	cursor: pointer;
+}
+
+.wp-finish.is-on {
+	border-color: #2f8f5b;
+	background: #edf7f1;
+	color: #2f8f5b;
+	font-weight: 700;
+}
+
+/* 标签编辑 */
+
+.wp-tag-editor {
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+}
+
+.wp-tag-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 5px;
+}
+
+.wp-tag-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 3px;
+	padding-right: 4px;
+}
+
+.wp-tag-x,
+.wp-sub-x {
+	padding: 0 2px;
+	border: 0;
+	background: none;
+	color: inherit;
+	font-family: inherit;
+	font-size: 13px;
+	line-height: 1;
+	cursor: pointer;
+	opacity: 0.55;
+}
+
+.wp-tag-x:hover,
+.wp-sub-x:hover {
+	opacity: 1;
+}
+
+/* 子任务 */
+
+.wp-subtasks {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.wp-subtask {
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	padding: 2px 0;
+}
+
+.wp-sub-check {
+	--wp-accent: #2f8f5b;
+	width: 15px;
+	height: 15px;
+	margin-top: 0;
+}
+
+.wp-sub-check[aria-pressed="true"]::after {
+	left: 3.5px;
+	top: 1px;
+	width: 3.5px;
+	height: 7px;
+}
+
+.wp-subtask-text {
+	flex: 1;
+	min-width: 0;
+	font-size: 12.5px;
+	line-height: 1.7;
+	overflow-wrap: anywhere;
+}
+
+.wp-subtask.is-done .wp-subtask-text {
+	color: var(--wp-dim);
+	text-decoration: line-through;
+}
+
+.wp-sub-x {
+	flex: 0 0 auto;
+	color: #b32d2e;
+}
+
+/* 排期一览 */
+
+.wp-detail-progress {
+	margin: 0;
+	font-size: 12.5px;
+	font-variant-numeric: tabular-nums;
+}
+
+.wp-datechips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: 5px;
+}
+
+.wp-datechip {
+	--wp-accent: #7aa2f7;
+	padding: 0 7px;
+	border: 1px solid var(--wp-line);
+	border-radius: 4px;
+	font-size: 11px;
+	line-height: 18px;
+	color: var(--wp-dim);
+	font-variant-numeric: tabular-nums;
+}
+
+.wp-datechip.is-done {
+	border-color: color-mix(in srgb, var(--wp-accent) 55%, #fff);
+	background: color-mix(in srgb, var(--wp-accent) 17%, #fff);
+	color: color-mix(in srgb, var(--wp-accent) 60%, #000);
+	font-weight: 700;
+}
+
+/* 选中态 */
+
+.wp-card.is-selected,
+.wp-item.is-selected {
+	border-color: var(--wp-blue);
+	box-shadow: 0 0 0 1px var(--wp-blue);
+}
