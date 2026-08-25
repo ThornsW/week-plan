@@ -28,6 +28,7 @@ function weekplan_enqueue_admin_assets( string $hook ): void {
 	}
 
 	wp_enqueue_style( 'weekplan-admin', WEEKPLAN_URL . 'assets/admin.css', array(), WEEKPLAN_VERSION );
+	wp_add_inline_style( 'weekplan-admin', weekplan_font_face_css() );
 	wp_enqueue_script( 'weekplan-admin', WEEKPLAN_URL . 'assets/admin.js', array(), WEEKPLAN_VERSION, true );
 	wp_localize_script(
 		'weekplan-admin',
@@ -37,6 +38,42 @@ function weekplan_enqueue_admin_assets( string $hook ): void {
 			'nonce'   => wp_create_nonce( WEEKPLAN_NONCE ),
 		)
 	);
+}
+
+/**
+ * 界面用博客那套 Maple Mono NF CN,和站点视觉统一。
+ *
+ * 字体文件在 uploads 里(两个 woff2 共约 12 MB),是全站共享的,不属于任何
+ * 主题 —— 所以这里只引用,不往插件里打包一份。生产环境上浏览器逛博客时
+ * 早就缓存过了。文件不在就不输出 @font-face,自动落回后面的备用字体。
+ */
+function weekplan_font_face_css(): string {
+	$uploads = wp_upload_dir();
+	if ( ! empty( $uploads['error'] ) ) {
+		return '';
+	}
+
+	$dir = trailingslashit( $uploads['basedir'] ) . 'fonts/';
+	$url = trailingslashit( $uploads['baseurl'] ) . 'fonts/';
+
+	$faces = array(
+		'MapleMono-NF-CN-Regular.woff2' => 400,
+		'MapleMono-NF-CN-Bold.woff2'    => 700,
+	);
+
+	$css = '';
+	foreach ( $faces as $file => $weight ) {
+		if ( ! file_exists( $dir . $file ) ) {
+			continue;
+		}
+		$css .= sprintf(
+			"@font-face{font-family:'Maple Mono NF CN';src:url('%s') format('woff2');font-weight:%d;font-style:normal;font-display:swap;}",
+			esc_url( $url . $file ),
+			$weight
+		);
+	}
+
+	return $css;
 }
 
 /** 从地址栏读要显示的那一周,没有或不合法就用本周。 */
@@ -201,8 +238,13 @@ function weekplan_render_admin_page(): void {
 					<?php $entries = $schedule[ $day['date'] ] ?? array(); ?>
 					<section class="weekplan-day<?php echo $day['is_today'] ? ' is-today' : ''; ?><?php echo $day['is_past'] ? ' is-past' : ''; ?>">
 						<header class="weekplan-day-head">
-							<span class="weekplan-day-name"><?php echo esc_html( $day['label'] ); ?></span>
-							<span class="weekplan-day-date"><?php echo esc_html( $day['day_label'] ); ?></span>
+							<span class="wp-daynum"><?php echo esc_html( $day['day_num'] ); ?></span>
+							<span class="wp-daystack">
+								<span class="wp-weekday"><?php echo esc_html( $day['weekday'] ); ?></span>
+								<?php if ( $day['show_month'] ) : ?>
+									<span class="wp-month"><?php echo esc_html( $day['month'] ); ?></span>
+								<?php endif; ?>
+							</span>
 							<?php if ( $day['is_today'] ) : ?>
 								<span class="weekplan-today-badge">今天</span>
 							<?php endif; ?>

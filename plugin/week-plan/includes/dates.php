@@ -49,21 +49,32 @@ function weekplan_parse_date( string $value ): ?DateTimeImmutable {
 /**
  * 展开一周的 7 天。
  *
- * @return array<int, array{date:string, label:string, day_label:string, is_today:bool, is_past:bool}>
+ * 日号单独给出来,是因为它在界面上要当主锚点用 —— 一眼扫过去先看到几号,
+ * 再看星期几。月份只在换月那一天标出来,天天重复反而是噪音。
+ *
+ * @return array<int, array{date:string, weekday:string, day_num:string, month:string,
+ *                          show_month:bool, is_today:bool, is_past:bool}>
  */
 function weekplan_week_days( DateTimeImmutable $week_start ): array {
 	$today = weekplan_today();
 	$days  = array();
+	$month = null;
 
 	for ( $i = 0; $i < 7; $i++ ) {
-		$day    = $week_start->modify( "+{$i} days" );
+		$day           = $week_start->modify( "+{$i} days" );
+		$current_month = $day->format( 'n' );
+
 		$days[] = array(
-			'date'      => $day->format( 'Y-m-d' ),
-			'label'     => WEEKPLAN_WEEKDAY_LABELS[ (int) $day->format( 'w' ) ],
-			'day_label' => $day->format( 'n/j' ),
-			'is_today'  => $day->format( 'Y-m-d' ) === $today->format( 'Y-m-d' ),
-			'is_past'   => $day < $today,
+			'date'       => $day->format( 'Y-m-d' ),
+			'weekday'    => WEEKPLAN_WEEKDAY_LABELS[ (int) $day->format( 'w' ) ],
+			'day_num'    => $day->format( 'j' ),
+			'month'      => $current_month . ' 月',
+			'show_month' => $current_month !== $month,
+			'is_today'   => $day->format( 'Y-m-d' ) === $today->format( 'Y-m-d' ),
+			'is_past'    => $day < $today,
 		);
+
+		$month = $current_month;
 	}
 
 	return $days;
