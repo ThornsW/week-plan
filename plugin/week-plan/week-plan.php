@@ -24,6 +24,8 @@ define( 'WEEKPLAN_URL', plugin_dir_url( __FILE__ ) );
 require_once WEEKPLAN_DIR . 'includes/schema.php';
 require_once WEEKPLAN_DIR . 'includes/types.php';
 require_once WEEKPLAN_DIR . 'includes/dates.php';
+require_once WEEKPLAN_DIR . 'includes/schedule.php';
+require_once WEEKPLAN_DIR . 'includes/ajax.php';
 require_once WEEKPLAN_DIR . 'includes/admin.php';
 
 /**
@@ -43,6 +45,7 @@ add_action( 'plugins_loaded', 'weekplan_maybe_upgrade_schema' );
 if ( is_admin() ) {
 	add_action( 'admin_menu', 'weekplan_register_admin_page' );
 	add_action( 'admin_enqueue_scripts', 'weekplan_enqueue_admin_assets' );
+	weekplan_register_ajax();
 }
 
 register_activation_hook( __FILE__, 'weekplan_activate' );

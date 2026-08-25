@@ -1,8 +1,19 @@
-/* 骨架样式。真正的视觉设计(点亮/未点亮的卡片配色)在原型阶段做。 */
+/*
+ * 视觉的核心是「点亮 / 未点亮」:完成的卡片被标签色填满,未完成的是中性的
+ * 描边卡片。这和常见的「完成即划掉变灰」相反 —— 一周做满了,整片是亮的。
+ *
+ * 对比度靠「有色 vs 无色」拉开,不靠明暗微差:未完成卡片整体是单色的
+ * (左侧色带去饱和成灰),只有标签小签保留颜色;完成后整张卡片染上标签色。
+ */
 
 .weekplan {
+	--wp-line: #dcdcde;
+	--wp-ink: #1d2327;
+	--wp-dim: #787c82;
 	margin-right: 20px;
 }
+
+/* ---------- 顶部 ---------- */
 
 .weekplan-bar {
 	display: flex;
@@ -20,7 +31,7 @@
 }
 
 .weekplan-range {
-	color: #50575e;
+	color: var(--wp-dim);
 	font-size: 13px;
 }
 
@@ -30,39 +41,91 @@
 	gap: 6px;
 }
 
-/* 三栏:左侧待办清单 / 中间纵向的一周 / 右侧详情。
-   中间那栏用 minmax(0, 1fr),否则长标题会把整个网格撑宽。 */
+/* ---------- 三栏 ---------- */
+
+/* 中间那栏用 minmax(0, 1fr),否则长标题会把整个网格撑宽。 */
 .weekplan-layout {
 	display: grid;
-	grid-template-columns: 260px minmax(0, 1fr) 300px;
+	grid-template-columns: 280px minmax(0, 1fr) 300px;
 	gap: 16px;
 	align-items: start;
 }
 
 .weekplan-side,
-.weekplan-detail,
-.weekplan-day {
-	background: #fff;
-	border: 1px solid #dcdcde;
-	border-radius: 4px;
+.weekplan-detail {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
 }
 
-.weekplan-panel-head {
-	padding: 10px 12px;
+.weekplan-detail,
+.wp-group,
+.weekplan-day {
+	background: #fff;
+	border: 1px solid var(--wp-line);
+	border-radius: 6px;
+}
+
+.wp-group-head,
+.wp-group > summary {
+	padding: 9px 12px;
 	border-bottom: 1px solid #f0f0f1;
 	font-weight: 600;
 	font-size: 13px;
+	cursor: default;
+}
+
+.wp-group > summary {
+	cursor: pointer;
+	list-style: none;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.wp-group > summary::-webkit-details-marker {
+	display: none;
+}
+
+.wp-group > summary::before {
+	content: "▸";
+	color: var(--wp-dim);
+	font-size: 10px;
+	transition: transform 0.12s;
+}
+
+.wp-group[open] > summary::before {
+	transform: rotate(90deg);
+}
+
+.wp-group[open] > summary {
+	border-bottom: 1px solid #f0f0f1;
+}
+
+.wp-hint {
+	margin-left: auto;
+	color: var(--wp-dim);
+	font-weight: 400;
+	font-size: 12px;
+}
+
+.wp-group-body {
+	padding: 8px;
+}
+
+.wp-overdue > summary {
+	color: #b32d2e;
 }
 
 .weekplan-empty {
 	margin: 0;
-	padding: 16px 12px;
+	padding: 10px 4px;
 	color: #8c8f94;
 	font-size: 13px;
 }
 
-/* 一周是纵向排列的 7 个日期分组,不是横向 7 列。
-   横向每列只有百来像素,放不下卡片。 */
+/* ---------- 一周:纵向 7 个日期分组 ---------- */
+
 .weekplan-week {
 	display: flex;
 	flex-direction: column;
@@ -82,26 +145,26 @@
 	font-size: 13px;
 }
 
-.weekplan-day-date {
-	color: #8c8f94;
+.weekplan-day-date,
+.weekplan-day-count {
+	color: var(--wp-dim);
 	font-size: 12px;
 }
 
-.weekplan-day-body {
-	min-height: 44px;
-	padding: 8px 12px;
+.weekplan-day-count {
+	margin-left: auto;
 }
 
 .weekplan-day.is-today {
 	border-color: #2271b1;
+	box-shadow: 0 0 0 1px #2271b1;
 }
 
 .weekplan-day.is-past .weekplan-day-head {
-	opacity: 0.6;
+	opacity: 0.55;
 }
 
 .weekplan-today-badge {
-	margin-left: auto;
 	padding: 1px 8px;
 	border-radius: 10px;
 	background: #2271b1;
@@ -109,9 +172,202 @@
 	font-size: 11px;
 }
 
-@media (max-width: 1100px) {
+.weekplan-day-body {
+	min-height: 46px;
+	padding: 8px;
+}
+
+/* ---------- 卡片 ---------- */
+
+.wp-card,
+.wp-item {
+	--wp-accent: #7aa2f7;
+	position: relative;
+	display: flex;
+	gap: 9px;
+	padding: 8px 10px;
+	border: 1px solid var(--wp-line);
+	border-left: 4px solid #c3c4c7;   /* 未点亮:左带是灰的,不透露标签色 */
+	border-radius: 5px;
+	background: #fff;
+	cursor: grab;
+	user-select: none;
+}
+
+.wp-card + .wp-card,
+.wp-item + .wp-item {
+	margin-top: 6px;
+}
+
+.wp-card:active,
+.wp-item:active {
+	cursor: grabbing;
+}
+
+.wp-card-main,
+.wp-item > div {
+	min-width: 0;
+	flex: 1;
+}
+
+.wp-card-title,
+.wp-item-title {
+	font-size: 13px;
+	line-height: 1.45;
+	color: var(--wp-ink);
+	overflow-wrap: anywhere;
+}
+
+.wp-item-meta {
+	margin-top: 2px;
+	color: var(--wp-dim);
+	font-size: 12px;
+}
+
+.wp-card-meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px;
+	margin-top: 5px;
+}
+
+/* 标签色在两种状态下都保持可见 —— 未点亮的卡片也靠它认出归属。 */
+.wp-tag {
+	--wp-tag: #7aa2f7;
+	padding: 1px 7px;
+	border-radius: 9px;
+	font-size: 11px;
+	line-height: 1.6;
+	color: color-mix(in srgb, var(--wp-tag) 72%, #000);
+	background: color-mix(in srgb, var(--wp-tag) 20%, #fff);
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wp-tag) 40%, #fff);
+}
+
+.wp-flag {
+	padding: 1px 6px;
+	border-radius: 9px;
+	font-size: 11px;
+	font-weight: 700;
+	color: #b32d2e;
+	background: #fcf0f1;
+	box-shadow: inset 0 0 0 1px #f3c5c6;
+}
+
+/* ---------- 点亮 ---------- */
+
+.wp-card.is-done {
+	border-color: color-mix(in srgb, var(--wp-accent) 55%, #fff);
+	border-left-color: var(--wp-accent);
+	background: color-mix(in srgb, var(--wp-accent) 17%, #fff);
+}
+
+.wp-card.is-done .wp-card-title {
+	color: color-mix(in srgb, var(--wp-accent) 60%, #000);
+	font-weight: 600;
+}
+
+/* 整个待办结项:比单天完成更强的信号 —— 加粗描边 + 右上角标。 */
+.wp-card.is-finished {
+	box-shadow: 0 0 0 2px color-mix(in srgb, var(--wp-accent) 65%, #fff);
+}
+
+.wp-card.is-finished::after {
+	content: "结项";
+	position: absolute;
+	top: -8px;
+	right: 6px;
+	padding: 0 6px;
+	border-radius: 8px;
+	background: var(--wp-accent);
+	color: #fff;
+	font-size: 10px;
+	line-height: 16px;
+}
+
+/* ---------- 勾 ---------- */
+
+.wp-check {
+	flex: 0 0 auto;
+	width: 17px;
+	height: 17px;
+	margin-top: 1px;
+	padding: 0;
+	border: 1.5px solid #b8bcc2;
+	border-radius: 50%;
+	background: #fff;
+	cursor: pointer;
+}
+
+.wp-check:hover {
+	border-color: var(--wp-accent);
+}
+
+.wp-check[aria-pressed="true"] {
+	border-color: var(--wp-accent);
+	background: var(--wp-accent);
+	position: relative;
+}
+
+.wp-check[aria-pressed="true"]::after {
+	content: "";
+	position: absolute;
+	left: 4.5px;
+	top: 1.5px;
+	width: 4px;
+	height: 8px;
+	border: solid #fff;
+	border-width: 0 2px 2px 0;
+	transform: rotate(45deg);
+}
+
+/* ---------- 拖拽反馈 ---------- */
+
+.wp-card.is-dragging,
+.wp-item.is-dragging {
+	opacity: 0.35;
+}
+
+.weekplan-day-body.is-over {
+	background: #f0f6fc;
+	outline: 2px dashed #2271b1;
+	outline-offset: -3px;
+	border-radius: 4px;
+}
+
+/* 拖到侧栏 = 取消这一天的排期 */
+.weekplan-side.is-over {
+	outline: 2px dashed #b32d2e;
+	outline-offset: 3px;
+	border-radius: 6px;
+}
+
+.weekplan-side.is-over::before {
+	content: "松手 = 取消这一天的排期";
+	display: block;
+	padding: 6px;
+	border-radius: 4px;
+	background: #fcf0f1;
+	color: #b32d2e;
+	font-size: 12px;
+	text-align: center;
+}
+
+/* 同一天内重排时的落点提示 */
+.wp-card.drop-before {
+	box-shadow: 0 -2px 0 0 #2271b1;
+}
+
+.wp-card.drop-after {
+	box-shadow: 0 2px 0 0 #2271b1;
+}
+
+.weekplan.is-busy {
+	cursor: progress;
+}
+
+@media (max-width: 1180px) {
 	.weekplan-layout {
-		grid-template-columns: 220px minmax(0, 1fr);
+		grid-template-columns: 250px minmax(0, 1fr);
 	}
 	.weekplan-detail {
 		grid-column: 1 / -1;
