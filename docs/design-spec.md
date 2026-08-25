@@ -216,7 +216,7 @@ CREATE TABLE {$wpdb->prefix}weekplan_schedule (
 - 前端：wp-admin 页面内自写 HTML + CSS + 原生 JavaScript，使用浏览器原生 HTML5 拖拽 API。
 - **无构建步骤**、无前端框架、无 npm。部署就是传文件；半年后回来改一行 HTML 不需要先修复依赖链。
 - 数据交互走 WordPress 的 AJAX 端点（`wp_ajax_weekplan_*`），每个写操作校验 nonce 和 `manage_options` 权限。
-- Markdown 渲染在服务端，用单文件的 Parsedown 一类的库，不引入构建链。【假设】
+- Markdown 渲染在服务端，用单文件的 Parsedown 1.8.0（原样放在 `plugin/week-plan/vendor/`），不引入构建链。它 2019 年后未再更新且历史上有 XSS 公告 —— 单用户、内容自己写，这条威胁不成立，但仍开了 `setSafeMode` 并叠一层 `wp_kses_post` 兜底。详见 `vendor/README.md`。
 
 ---
 
@@ -278,4 +278,4 @@ WordPress 的数据卷不进 git。开发完成后清理整个 `dev/` 目录。
 - [x] 标签管理(含按标签筛选)
 - [x] 批量排期对话框
 - [x] 右键菜单:整体顺延、删除待办
-- [ ] Markdown 渲染
+- [x] Markdown 渲染

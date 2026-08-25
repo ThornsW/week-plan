@@ -105,10 +105,17 @@ function weekplan_render_detail( int $todo_id ): void {
 				<input type="text" class="wp-input wp-sub-input" placeholder="加一条子任务,回车确认">
 			</div>
 
-			<label class="wp-field">
-				<span class="wp-label">笔记 · Markdown</span>
+			<div class="wp-field wp-notefield">
+				<span class="wp-label">
+					笔记 · Markdown
+					<span class="wp-notetabs">
+						<button type="button" class="wp-notetab is-on" data-mode="edit">编辑</button>
+						<button type="button" class="wp-notetab" data-mode="view">预览</button>
+					</span>
+				</span>
 				<textarea class="wp-input wp-note" data-field="note" rows="7"><?php echo esc_textarea( $post->post_content ); ?></textarea>
-			</label>
+				<div class="wp-noteview" hidden><?php echo weekplan_render_markdown( $post->post_content ); ?></div>
+			</div>
 
 			<div class="wp-field">
 				<span class="wp-label">

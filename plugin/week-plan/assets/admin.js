@@ -933,3 +933,65 @@
 
 	window.addEventListener( 'scroll', closeMenu, true );
 }() );
+
+/*
+ * 笔记的编辑 / 预览切换。
+ *
+ * Markdown 在服务端渲染 —— 前端再引一个解析器就是同一件事做两遍,而且
+ * 两边的方言迟早会对不上。切到预览时把当前文本发过去换 HTML 回来。
+ */
+( function () {
+	'use strict';
+
+	var config = window.weekplanData || {};
+	var panel = document.getElementById( 'weekplan-detail' );
+	if ( ! panel ) {
+		return;
+	}
+
+	panel.addEventListener( 'click', function ( event ) {
+		if ( ! event.target.closest ) {
+			return;
+		}
+		var tab = event.target.closest( '.wp-notetab' );
+		if ( ! tab ) {
+			return;
+		}
+
+		var field = tab.closest( '.wp-notefield' );
+		var note = field.querySelector( '.wp-note' );
+		var view = field.querySelector( '.wp-noteview' );
+		var toView = 'view' === tab.dataset.mode;
+
+		field.querySelectorAll( '.wp-notetab' ).forEach( function ( other ) {
+			other.classList.toggle( 'is-on', other === tab );
+		} );
+
+		note.hidden = toView;
+		view.hidden = ! toView;
+
+		if ( ! toView ) {
+			return;
+		}
+
+		// 预览的是当前文本框里的内容,不是上次保存的 —— 边写边看才有意义
+		var body = new URLSearchParams();
+		body.set( 'action', 'weekplan_preview' );
+		body.set( 'nonce', config.nonce );
+		body.set( 'value', note.value );
+
+		fetch( config.ajaxUrl, {
+			method: 'POST',
+			credentials: 'same-origin',
+			body: body
+		} ).then( function ( r ) {
+			return r.json();
+		} ).then( function ( json ) {
+			if ( json && json.success ) {
+				view.innerHTML = json.data.html || '<p class="weekplan-empty">还没写笔记。</p>';
+			}
+		} ).catch( function ( error ) {
+			window.console && console.error( '[week-plan]', error );
+		} );
+	} );
+}() );

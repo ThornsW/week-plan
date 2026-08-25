@@ -980,3 +980,127 @@
 	background: #fcf0f1;
 	color: #b32d2e;
 }
+
+/* ---------- 笔记预览 ---------- */
+
+.wp-notetabs {
+	margin-left: auto;
+	display: flex;
+	gap: 2px;
+}
+
+.wp-notetab {
+	padding: 0 8px;
+	border: 1px solid transparent;
+	border-radius: 4px;
+	background: none;
+	color: var(--wp-dim);
+	font-family: inherit;
+	font-size: 10.5px;
+	line-height: 1.8;
+	cursor: pointer;
+}
+
+.wp-notetab.is-on {
+	border-color: #c5d9ec;
+	background: #f0f6fc;
+	color: var(--wp-blue);
+}
+
+.wp-noteview {
+	min-height: 120px;
+	padding: 8px 10px;
+	border: 1px solid var(--wp-line);
+	border-radius: 4px;
+	background: #fcfcfc;
+	font-size: 12.5px;
+	line-height: 1.75;
+	overflow-wrap: anywhere;
+}
+
+.wp-noteview > *:first-child {
+	margin-top: 0;
+}
+
+.wp-noteview > *:last-child {
+	margin-bottom: 0;
+}
+
+.wp-noteview h1,
+.wp-noteview h2,
+.wp-noteview h3,
+.wp-noteview h4 {
+	margin: 12px 0 6px;
+	font-weight: 700;
+	line-height: 1.5;
+}
+
+.wp-noteview h1 { font-size: 15px; }
+.wp-noteview h2 { font-size: 14px; }
+.wp-noteview h3 { font-size: 13px; }
+.wp-noteview h4 { font-size: 12.5px; }
+
+.wp-noteview p,
+.wp-noteview ul,
+.wp-noteview ol,
+.wp-noteview blockquote {
+	margin: 0 0 8px;
+}
+
+.wp-noteview ul,
+.wp-noteview ol {
+	padding-left: 20px;
+}
+
+.wp-noteview li {
+	margin-bottom: 2px;
+}
+
+.wp-noteview code {
+	padding: 1px 4px;
+	border-radius: 3px;
+	background: #f0f0f1;
+	font-family: inherit;
+	font-size: 12px;
+}
+
+.wp-noteview pre {
+	margin: 0 0 8px;
+	padding: 8px 10px;
+	border-radius: 4px;
+	background: #f0f0f1;
+	overflow-x: auto;
+}
+
+.wp-noteview pre code {
+	padding: 0;
+	background: none;
+}
+
+.wp-noteview blockquote {
+	padding-left: 10px;
+	border-left: 3px solid var(--wp-line);
+	color: var(--wp-dim);
+}
+
+.wp-noteview a {
+	color: var(--wp-blue);
+}
+
+.wp-noteview hr {
+	margin: 12px 0;
+	border: 0;
+	border-top: 1px solid var(--wp-line);
+}
+
+.wp-noteview table {
+	border-collapse: collapse;
+	margin-bottom: 8px;
+}
+
+.wp-noteview th,
+.wp-noteview td {
+	padding: 3px 8px;
+	border: 1px solid var(--wp-line);
+	font-size: 12px;
+}
