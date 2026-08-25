@@ -681,3 +681,140 @@
 	border-color: var(--wp-blue);
 	box-shadow: 0 0 0 1px var(--wp-blue);
 }
+
+/* ---------- 侧栏标签区 ---------- */
+
+.wp-tagrow {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 4px;
+	border-radius: 4px;
+	padding: 1px 4px;
+}
+
+.wp-tagrow:hover {
+	background: #f6f7f7;
+}
+
+.wp-tagrow.is-active {
+	background: #f0f6fc;
+	box-shadow: inset 0 0 0 1px #c5d9ec;
+}
+
+.wp-tagrow-link {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	align-items: center;
+	gap: 7px;
+	padding: 3px 2px;
+	color: var(--wp-ink);
+	text-decoration: none;
+	font-size: 12.5px;
+	line-height: 1.7;
+}
+
+.wp-tagrow-link:hover,
+.wp-tagrow-link:focus {
+	color: var(--wp-blue);
+	box-shadow: none;
+}
+
+.wp-tagrow-clear {
+	display: block;
+	padding: 3px 6px;
+	margin-bottom: 3px;
+	color: #b32d2e;
+	text-decoration: none;
+	font-size: 11.5px;
+}
+
+.wp-dot {
+	--wp-tag: #7aa2f7;
+	flex: 0 0 auto;
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
+	background: var(--wp-tag);
+	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wp-tag) 70%, #000);
+}
+
+.wp-tagrow-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.wp-tagrow-count {
+	color: var(--wp-dim);
+	font-size: 11px;
+	font-variant-numeric: tabular-nums;
+}
+
+.wp-tag-edit {
+	flex: 0 0 auto;
+	padding: 0 4px;
+	border: 0;
+	background: none;
+	color: var(--wp-dim);
+	font-family: inherit;
+	font-size: 12px;
+	cursor: pointer;
+	opacity: 0;
+}
+
+.wp-tagrow:hover .wp-tag-edit,
+.wp-tagrow.is-editing .wp-tag-edit {
+	opacity: 1;
+}
+
+.wp-tag-editrow {
+	flex: 1 0 100%;
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	padding: 5px 2px 3px;
+}
+
+.wp-tagname {
+	flex: 1;
+	min-width: 0;
+	padding: 3px 6px;
+	font-size: 12px;
+}
+
+.wp-tagcolor {
+	flex: 0 0 auto;
+	width: 28px;
+	height: 24px;
+	padding: 1px;
+	border: 1px solid var(--wp-line);
+	border-radius: 4px;
+	background: #fff;
+	cursor: pointer;
+}
+
+.wp-tag-ok,
+.wp-tag-rm {
+	flex: 0 0 auto;
+	padding: 2px 8px;
+	border: 1px solid var(--wp-line);
+	border-radius: 4px;
+	background: #fff;
+	font-family: inherit;
+	font-size: 11.5px;
+	cursor: pointer;
+}
+
+.wp-tag-ok {
+	border-color: #c5d9ec;
+	color: var(--wp-blue);
+}
+
+.wp-tag-rm {
+	border-color: #f3c5c6;
+	color: #b32d2e;
+}

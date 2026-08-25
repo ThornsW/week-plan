@@ -90,14 +90,19 @@ function weekplan_requested_week_start(): DateTimeImmutable {
 	return weekplan_week_start_of( weekplan_today() );
 }
 
+/** 翻周时保留当前的标签筛选,不然翻一页筛选就丢了。 */
 function weekplan_week_url( DateTimeImmutable $week_start ): string {
-	return add_query_arg(
-		array(
-			'page' => WEEKPLAN_MENU_SLUG,
-			'week' => $week_start->format( 'Y-m-d' ),
-		),
-		admin_url( 'admin.php' )
+	$args = array(
+		'page' => WEEKPLAN_MENU_SLUG,
+		'week' => $week_start->format( 'Y-m-d' ),
 	);
+
+	$tag = weekplan_requested_tag();
+	if ( $tag > 0 ) {
+		$args['tag'] = $tag;
+	}
+
+	return add_query_arg( $args, admin_url( 'admin.php' ) );
 }
 
 /** 「已完成 12 天」—— 不给分母,因为计划总天数会变,分母看着像承诺。 */
@@ -172,10 +177,14 @@ function weekplan_render_admin_page(): void {
 	$this_week    = weekplan_week_start_of( weekplan_today() );
 	$is_this_week = $week_start->format( 'Y-m-d' ) === $this_week->format( 'Y-m-d' );
 
-	$schedule = weekplan_schedule_between( $week_start->format( 'Y-m-d' ), $week_end->format( 'Y-m-d' ) );
-	$sidebar  = weekplan_sidebar_todos();
+	// 标签筛选:先算出这个标签下的待办 id,后面三个查询都按它过滤。
+	$active_tag = weekplan_requested_tag();
+	$only       = $active_tag ? weekplan_todo_ids_with_tag( $active_tag ) : null;
+
+	$schedule = weekplan_schedule_between( $week_start->format( 'Y-m-d' ), $week_end->format( 'Y-m-d' ), $only );
+	$sidebar  = weekplan_sidebar_todos( $only );
 	// 逾期区只在看「今天所在的这一周」时出现,而且只汇总上一周。
-	$overdue  = $is_this_week ? weekplan_overdue_last_week() : array();
+	$overdue  = $is_this_week ? weekplan_overdue_last_week( $only ) : array();
 	?>
 	<div class="wrap weekplan">
 		<div class="weekplan-bar">
@@ -205,6 +214,8 @@ function weekplan_render_admin_page(): void {
 						</div>
 					</details>
 				<?php endif; ?>
+
+				<?php weekplan_render_tag_group( $week_start, $active_tag ); ?>
 
 				<div class="wp-group">
 					<div class="wp-group-head">
@@ -275,4 +286,64 @@ function weekplan_card_html( array $entry ): string {
 	ob_start();
 	weekplan_render_card( $entry );
 	return (string) ob_get_clean();
+}
+
+/** 当前生效的标签筛选,没有或不合法就返回 0。 */
+function weekplan_requested_tag(): int {
+	$raw = isset( $_GET['tag'] ) ? (int) $_GET['tag'] : 0;
+	if ( $raw <= 0 ) {
+		return 0;
+	}
+	$term = get_term( $raw, WEEKPLAN_TAXONOMY );
+	return ( $term && ! is_wp_error( $term ) ) ? $raw : 0;
+}
+
+/** 保留当前周,只换标签筛选。 */
+function weekplan_tag_url( DateTimeImmutable $week_start, int $tag_id ): string {
+	$args = array(
+		'page' => WEEKPLAN_MENU_SLUG,
+		'week' => $week_start->format( 'Y-m-d' ),
+	);
+	if ( $tag_id > 0 ) {
+		$args['tag'] = $tag_id;
+	}
+	return add_query_arg( $args, admin_url( 'admin.php' ) );
+}
+
+/**
+ * 侧栏的标签区。
+ *
+ * 标签在这里同时是筛选器和管理入口 —— 点名字筛选,点铅笔就地改名改色。
+ * 筛选走地址栏参数而不是前端隐藏,这样刷新后还在,每天的「N 项」也不会
+ * 和看到的卡片对不上。
+ */
+function weekplan_render_tag_group( DateTimeImmutable $week_start, int $active ): void {
+	$tags = weekplan_all_tags();
+	?>
+	<details class="wp-group wp-taggroup" <?php echo $active ? 'open' : ''; ?>>
+		<summary>标签 · <?php echo count( $tags ); ?> 个<?php if ( $active ) : ?><span class="wp-hint">筛选中</span><?php endif; ?></summary>
+		<div class="wp-group-body">
+			<?php if ( ! $tags ) : ?>
+				<p class="weekplan-empty">还没有标签。在详情栏里打字就能建。</p>
+			<?php else : ?>
+				<?php if ( $active ) : ?>
+					<a class="wp-tagrow wp-tagrow-clear" href="<?php echo esc_url( weekplan_tag_url( $week_start, 0 ) ); ?>">× 取消筛选</a>
+				<?php endif; ?>
+				<?php foreach ( $tags as $tag ) : ?>
+					<div class="wp-tagrow<?php echo $active === $tag['id'] ? ' is-active' : ''; ?>"
+						data-term="<?php echo esc_attr( (string) $tag['id'] ); ?>"
+						data-name="<?php echo esc_attr( $tag['name'] ); ?>"
+						data-color="<?php echo esc_attr( $tag['color'] ); ?>">
+						<a class="wp-tagrow-link" href="<?php echo esc_url( weekplan_tag_url( $week_start, $active === $tag['id'] ? 0 : $tag['id'] ) ); ?>">
+							<span class="wp-dot" style="--wp-tag: <?php echo esc_attr( $tag['color'] ); ?>"></span>
+							<span class="wp-tagrow-name"><?php echo esc_html( $tag['name'] ); ?></span>
+							<span class="wp-tagrow-count"><?php echo esc_html( (string) $tag['count'] ); ?></span>
+						</a>
+						<button type="button" class="wp-tag-edit" title="改名 / 改色">✎</button>
+					</div>
+				<?php endforeach; ?>
+			<?php endif; ?>
+		</div>
+	</details>
+	<?php
 }

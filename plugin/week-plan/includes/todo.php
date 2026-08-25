@@ -220,3 +220,63 @@ function weekplan_set_todo_tags( int $id, array $names ): void {
 
 	wp_set_object_terms( $id, $ids, WEEKPLAN_TAXONOMY );
 }
+
+/** 改名 + 改色。名字撞了就拒绝,不静默合并。 */
+function weekplan_save_tag( int $term_id, string $name, string $color ): true|WP_Error {
+	$term = get_term( $term_id, WEEKPLAN_TAXONOMY );
+	if ( ! $term || is_wp_error( $term ) ) {
+		return new WP_Error( 'weekplan_no_tag', '标签不存在。' );
+	}
+
+	$name = trim( sanitize_text_field( $name ) );
+	if ( '' === $name ) {
+		return new WP_Error( 'weekplan_empty_tag', '标签名不能为空。' );
+	}
+
+	$clash = get_term_by( 'name', $name, WEEKPLAN_TAXONOMY );
+	if ( $clash && (int) $clash->term_id !== $term_id ) {
+		return new WP_Error( 'weekplan_tag_exists', '已经有同名标签了。' );
+	}
+
+	if ( $name !== $term->name ) {
+		$result = wp_update_term( $term_id, WEEKPLAN_TAXONOMY, array( 'name' => $name ) );
+		if ( is_wp_error( $result ) ) {
+			return $result;
+		}
+	}
+
+	// 颜色必须是 #rrggbb —— 它会原样进 style 属性,不能放任意字符串进去
+	if ( 1 === preg_match( '/^#[0-9a-fA-F]{6}$/', $color ) ) {
+		update_term_meta( $term_id, '_weekplan_color', strtoupper( $color ) );
+	}
+
+	return true;
+}
+
+/** 删标签。待办本身不动,只是不再挂这个标签。 */
+function weekplan_delete_tag( int $term_id ): bool {
+	$result = wp_delete_term( $term_id, WEEKPLAN_TAXONOMY );
+	return true === $result;
+}
+
+/** 挂了某个标签的待办 id。用来做筛选。 */
+function weekplan_todo_ids_with_tag( int $tag_id ): array {
+	return array_map(
+		'intval',
+		get_posts(
+			array(
+				'post_type'      => WEEKPLAN_POST_TYPE,
+				'post_status'    => 'publish',
+				'posts_per_page' => -1,
+				'fields'         => 'ids',
+				'tax_query'      => array(
+					array(
+						'taxonomy' => WEEKPLAN_TAXONOMY,
+						'field'    => 'term_id',
+						'terms'    => $tag_id,
+					),
+				),
+			)
+		)
+	);
+}

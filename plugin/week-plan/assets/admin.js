@@ -581,3 +581,102 @@
 		save( 'subtasks', JSON.stringify( items ) );
 	}
 }() );
+
+/*
+ * 标签的就地编辑。
+ *
+ * 点铅笔把那一行换成「名字 + 颜色 + 保存/删除」,改完刷新页面 —— 标签色
+ * 散落在周视图和侧栏的每一张卡片上,局部更新要碰的地方太多,不值得。
+ */
+( function () {
+	'use strict';
+
+	var config = window.weekplanData || {};
+
+	function post( action, payload ) {
+		var body = new URLSearchParams();
+		body.set( 'action', 'weekplan_' + action );
+		body.set( 'nonce', config.nonce );
+		Object.keys( payload ).forEach( function ( key ) {
+			body.set( key, payload[ key ] );
+		} );
+
+		return fetch( config.ajaxUrl, {
+			method: 'POST',
+			credentials: 'same-origin',
+			body: body
+		} ).then( function ( r ) {
+			return r.json();
+		} ).then( function ( json ) {
+			if ( ! json || ! json.success ) {
+				throw new Error( ( json && json.data && json.data.message ) || '请求失败' );
+			}
+			return json.data || {};
+		} );
+	}
+
+	function closeEditor( row ) {
+		var editor = row.querySelector( '.wp-tag-editrow' );
+		if ( editor ) {
+			editor.remove();
+		}
+		row.classList.remove( 'is-editing' );
+	}
+
+	document.addEventListener( 'click', function ( event ) {
+		if ( ! event.target.closest ) {
+			return;
+		}
+
+		var openBtn = event.target.closest( '.wp-tag-edit' );
+		if ( openBtn ) {
+			event.preventDefault();
+			var row = openBtn.closest( '.wp-tagrow' );
+			if ( row.classList.contains( 'is-editing' ) ) {
+				closeEditor( row );
+				return;
+			}
+			row.classList.add( 'is-editing' );
+			var box = document.createElement( 'div' );
+			box.className = 'wp-tag-editrow';
+			box.innerHTML =
+				'<input type="text" class="wp-input wp-tagname">' +
+				'<input type="color" class="wp-tagcolor">' +
+				'<button type="button" class="wp-tag-ok">保存</button>' +
+				'<button type="button" class="wp-tag-rm">删除</button>';
+			box.querySelector( '.wp-tagname' ).value = row.dataset.name;
+			box.querySelector( '.wp-tagcolor' ).value = row.dataset.color;
+			row.appendChild( box );
+			box.querySelector( '.wp-tagname' ).focus();
+			return;
+		}
+
+		var save = event.target.closest( '.wp-tag-ok' );
+		if ( save ) {
+			var saveRow = save.closest( '.wp-tagrow' );
+			post( 'tag_save', {
+				term_id: saveRow.dataset.term,
+				name: saveRow.querySelector( '.wp-tagname' ).value,
+				color: saveRow.querySelector( '.wp-tagcolor' ).value
+			} ).then( function () {
+				window.location.reload();
+			} ).catch( function ( error ) {
+				window.alert( error.message );
+			} );
+			return;
+		}
+
+		var remove = event.target.closest( '.wp-tag-rm' );
+		if ( remove ) {
+			var rmRow = remove.closest( '.wp-tagrow' );
+			if ( ! window.confirm( '删掉标签「' + rmRow.dataset.name + '」?待办本身不会被删,只是不再挂这个标签。' ) ) {
+				return;
+			}
+			post( 'tag_delete', { term_id: rmRow.dataset.term } ).then( function () {
+				window.location.reload();
+			} ).catch( function ( error ) {
+				window.alert( error.message );
+			} );
+		}
+	} );
+}() );

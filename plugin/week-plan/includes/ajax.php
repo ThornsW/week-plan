@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 const WEEKPLAN_NONCE = 'weekplan_action';
 
 function weekplan_register_ajax(): void {
-	$actions = array( 'add', 'move', 'remove', 'reorder', 'toggle', 'detail', 'create', 'save', 'delete' );
+	$actions = array( 'add', 'move', 'remove', 'reorder', 'toggle', 'detail', 'create', 'save', 'delete', 'tag_save', 'tag_delete' );
 	foreach ( $actions as $action ) {
 		add_action( "wp_ajax_weekplan_$action", "weekplan_ajax_$action" );
 	}
@@ -180,6 +180,28 @@ function weekplan_ajax_delete(): void {
 	$id = weekplan_post_int( 'todo_id' );
 	if ( ! weekplan_delete_todo( $id ) ) {
 		weekplan_ajax_reply( new WP_Error( 'weekplan_delete_failed', '删除失败。' ) );
+	}
+	weekplan_ajax_reply( array() );
+}
+
+/* ---------- 标签管理 ---------- */
+
+function weekplan_ajax_tag_save(): void {
+	weekplan_ajax_guard();
+
+	$result = weekplan_save_tag(
+		weekplan_post_int( 'term_id' ),
+		weekplan_post_text( 'name' ),
+		weekplan_post_text( 'color' )
+	);
+	weekplan_ajax_reply( $result );
+}
+
+function weekplan_ajax_tag_delete(): void {
+	weekplan_ajax_guard();
+
+	if ( ! weekplan_delete_tag( weekplan_post_int( 'term_id' ) ) ) {
+		weekplan_ajax_reply( new WP_Error( 'weekplan_tag_delete_failed', '删除失败。' ) );
 	}
 	weekplan_ajax_reply( array() );
 }

@@ -67,7 +67,7 @@ function weekplan_done_day_count( int $todo_id ): int {
  *
  * @return array<string, array<int, array>> 键是 'YYYY-MM-DD'
  */
-function weekplan_schedule_between( string $from, string $to ): array {
+function weekplan_schedule_between( string $from, string $to, ?array $only = null ): array {
 	global $wpdb;
 	$table = weekplan_schedule_table();
 
@@ -88,6 +88,9 @@ function weekplan_schedule_between( string $from, string $to ): array {
 		if ( null === $todo ) {
 			continue; // 待办已被删除,排期是孤儿,跳过
 		}
+		if ( null !== $only && ! in_array( (int) $row->todo_id, $only, true ) ) {
+			continue; // 标签筛选掉了
+		}
 		$by_day[ $row->plan_date ][] = array(
 			'schedule_id' => (int) $row->id,
 			'date'        => $row->plan_date,
@@ -100,13 +103,13 @@ function weekplan_schedule_between( string $from, string $to ): array {
 }
 
 /** 逾期区:只汇总上一周的未完成排期,更早的静默留存,不再提醒。 */
-function weekplan_overdue_last_week(): array {
+function weekplan_overdue_last_week( ?array $only = null ): array {
 	$this_week = weekplan_week_start_of( weekplan_today() );
 	$from      = $this_week->modify( '-7 days' )->format( 'Y-m-d' );
 	$to        = $this_week->modify( '-1 day' )->format( 'Y-m-d' );
 
 	$items = array();
-	foreach ( weekplan_schedule_between( $from, $to ) as $entries ) {
+	foreach ( weekplan_schedule_between( $from, $to, $only ) as $entries ) {
 		foreach ( $entries as $entry ) {
 			if ( ! $entry['done'] ) {
 				$items[] = $entry;
@@ -123,7 +126,7 @@ function weekplan_overdue_last_week(): array {
  *
  * @return array{scheduled: array, unscheduled: array}
  */
-function weekplan_sidebar_todos(): array {
+function weekplan_sidebar_todos( ?array $only = null ): array {
 	global $wpdb;
 	$table = weekplan_schedule_table();
 
@@ -152,6 +155,9 @@ function weekplan_sidebar_todos(): array {
 		$todo = weekplan_todo_summary( $post->ID );
 		if ( null === $todo || $todo['finished'] ) {
 			continue;
+		}
+		if ( null !== $only && ! in_array( (int) $post->ID, $only, true ) ) {
+			continue; // 标签筛选掉了
 		}
 
 		if ( isset( $latest[ $post->ID ] ) ) {
