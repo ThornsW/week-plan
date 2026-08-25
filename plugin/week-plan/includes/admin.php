@@ -277,6 +277,8 @@ function weekplan_render_admin_page(): void {
 				<?php weekplan_render_detail_empty(); ?>
 			</aside>
 		</div>
+
+		<?php weekplan_render_batch_dialog(); ?>
 	</div>
 	<?php
 }
@@ -345,5 +347,60 @@ function weekplan_render_tag_group( DateTimeImmutable $week_start, int $active )
 			<?php endif; ?>
 		</div>
 	</details>
+	<?php
+}
+
+/**
+ * 批量排期对话框。
+ *
+ * 用原生 <dialog>,不引任何库 —— 它自带模态遮罩、Esc 关闭和焦点管理。
+ * 整页只渲染一份,详情栏换待办时只改里面的 todo_id。
+ */
+function weekplan_render_batch_dialog(): void {
+	$today = weekplan_today();
+	?>
+	<dialog class="wp-dialog" id="weekplan-batch">
+		<form method="dialog" class="wp-dialog-form">
+			<h2 class="wp-dialog-title">批量排期</h2>
+			<p class="wp-dialog-sub" id="weekplan-batch-for"></p>
+
+			<div class="wp-field-row">
+				<label class="wp-field">
+					<span class="wp-label">从</span>
+					<input type="date" class="wp-input" id="weekplan-batch-from"
+						value="<?php echo esc_attr( $today->format( 'Y-m-d' ) ); ?>">
+				</label>
+				<label class="wp-field">
+					<span class="wp-label">到</span>
+					<input type="date" class="wp-input" id="weekplan-batch-to"
+						value="<?php echo esc_attr( $today->modify( '+29 days' )->format( 'Y-m-d' ) ); ?>">
+				</label>
+			</div>
+
+			<div class="wp-field">
+				<span class="wp-label">星期几</span>
+				<div class="wp-weekpick">
+					<?php
+					// 按站点的周起始日排,和周视图一致
+					$start = weekplan_start_of_week();
+					for ( $i = 0; $i < 7; $i++ ) :
+						$dow = ( $start + $i ) % 7;
+						?>
+						<label class="wp-weekpick-item">
+							<input type="checkbox" value="<?php echo esc_attr( (string) $dow ); ?>" checked>
+							<span><?php echo esc_html( WEEKPLAN_WEEKDAY_LABELS[ $dow ] ); ?></span>
+						</label>
+					<?php endfor; ?>
+				</div>
+			</div>
+
+			<p class="wp-dialog-preview" id="weekplan-batch-preview"></p>
+
+			<div class="wp-dialog-actions">
+				<button type="button" class="button" id="weekplan-batch-cancel">取消</button>
+				<button type="button" class="button button-primary" id="weekplan-batch-go">排上</button>
+			</div>
+		</form>
+	</dialog>
 	<?php
 }

@@ -680,3 +680,107 @@
 		}
 	} );
 }() );
+
+/*
+ * 批量排期对话框。
+ *
+ * 用原生 <dialog>,自带模态遮罩、Esc 关闭和焦点管理,不需要任何库。
+ * 排完刷新页面 —— 生成的日子多半落在当前这一周之外,局部更新没意义。
+ */
+( function () {
+	'use strict';
+
+	var config = window.weekplanData || {};
+	var dialog = document.getElementById( 'weekplan-batch' );
+	var panel = document.getElementById( 'weekplan-detail' );
+	if ( ! dialog || ! panel ) {
+		return;
+	}
+
+	var fromInput = document.getElementById( 'weekplan-batch-from' );
+	var toInput = document.getElementById( 'weekplan-batch-to' );
+	var preview = document.getElementById( 'weekplan-batch-preview' );
+	var forLabel = document.getElementById( 'weekplan-batch-for' );
+	var todoId = '';
+
+	function pickedWeekdays() {
+		return Array.prototype.filter.call(
+			dialog.querySelectorAll( '.wp-weekpick input' ),
+			function ( box ) {
+				return box.checked;
+			}
+		).map( function ( box ) {
+			return Number( box.value );
+		} );
+	}
+
+	/* 本地先算一遍要生成多少天,让人在点「排上」之前就知道规模 */
+	function refreshPreview() {
+		var from = new Date( fromInput.value + 'T00:00:00' );
+		var to = new Date( toInput.value + 'T00:00:00' );
+		var days = pickedWeekdays();
+
+		if ( isNaN( from ) || isNaN( to ) || to < from || ! days.length ) {
+			preview.textContent = '';
+			return;
+		}
+
+		var count = 0;
+		for ( var d = new Date( from ); d <= to; d.setDate( d.getDate() + 1 ) ) {
+			if ( days.indexOf( d.getDay() ) !== -1 ) {
+				count++;
+			}
+		}
+		preview.textContent = '将排上 ' + count + ' 天(已经排过的会跳过)。';
+	}
+
+	dialog.addEventListener( 'change', refreshPreview );
+	dialog.addEventListener( 'input', refreshPreview );
+
+	panel.addEventListener( 'click', function ( event ) {
+		if ( ! event.target.closest || ! event.target.closest( '.wp-batch-open' ) ) {
+			return;
+		}
+		var box = panel.querySelector( '[data-todo]' );
+		if ( ! box ) {
+			return;
+		}
+		todoId = box.dataset.todo;
+		var title = panel.querySelector( '[data-field="title"]' );
+		forLabel.textContent = title ? title.value : '';
+		refreshPreview();
+		dialog.showModal();
+	} );
+
+	document.getElementById( 'weekplan-batch-cancel' ).addEventListener( 'click', function () {
+		dialog.close();
+	} );
+
+	document.getElementById( 'weekplan-batch-go' ).addEventListener( 'click', function () {
+		var body = new URLSearchParams();
+		body.set( 'action', 'weekplan_batch' );
+		body.set( 'nonce', config.nonce );
+		body.set( 'todo_id', todoId );
+		body.set( 'from', fromInput.value );
+		body.set( 'to', toInput.value );
+		pickedWeekdays().forEach( function ( day ) {
+			body.append( 'weekdays[]', day );
+		} );
+
+		fetch( config.ajaxUrl, {
+			method: 'POST',
+			credentials: 'same-origin',
+			body: body
+		} ).then( function ( r ) {
+			return r.json();
+		} ).then( function ( json ) {
+			if ( ! json || ! json.success ) {
+				throw new Error( ( json && json.data && json.data.message ) || '请求失败' );
+			}
+			dialog.close();
+			window.location.reload();
+		} ).catch( function ( error ) {
+			window.alert( error.message );
+		} );
+	} );
+}() );

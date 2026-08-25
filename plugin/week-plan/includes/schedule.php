@@ -310,3 +310,107 @@ function weekplan_toggle_done( int $schedule_id ): array|WP_Error {
 		'done_days' => weekplan_done_day_count( (int) $row->todo_id ),
 	);
 }
+
+/** 批量排期一次最多生成多少条。挡住「随手选了十年」这种误操作。 */
+const WEEKPLAN_BATCH_LIMIT = 400;
+
+/**
+ * 批量排期:给定区间和星期几,一次生成多条排期。
+ *
+ * 解决的是长期计划没法手拖的问题 —— 「接下来三个月每周一三五」用拖的要
+ * 拖近四十次。星期几用 0(周日)到 6(周六),和 PHP 的 'w' 一致。
+ *
+ * 已经排过的日子会跳过,不报错也不重复 —— 表上 (todo_id, plan_date) 是
+ * 唯一键,重跑一次同样的区间是安全的。
+ *
+ * @return array{added:int, skipped:int}|WP_Error
+ */
+function weekplan_batch_schedule( int $todo_id, string $from, string $to, array $weekdays ): array|WP_Error {
+	global $wpdb;
+
+	if ( null === weekplan_todo_summary( $todo_id ) ) {
+		return new WP_Error( 'weekplan_no_todo', '待办不存在。' );
+	}
+
+	$start = weekplan_parse_date( $from );
+	$end   = weekplan_parse_date( $to );
+	if ( null === $start || null === $end ) {
+		return new WP_Error( 'weekplan_bad_date', '日期格式不对。' );
+	}
+	if ( $end < $start ) {
+		return new WP_Error( 'weekplan_bad_range', '结束日期不能早于开始日期。' );
+	}
+
+	$wanted = array_values( array_unique( array_filter(
+		array_map( 'intval', $weekdays ),
+		static fn( $d ) => $d >= 0 && $d <= 6
+	) ) );
+	if ( ! $wanted ) {
+		return new WP_Error( 'weekplan_no_weekday', '至少要勾一个星期几。' );
+	}
+
+	// 先把日子列出来,超限就整批拒绝,不做「排一半」这种半吊子结果
+	$dates = array();
+	for ( $day = $start; $day <= $end; $day = $day->modify( '+1 day' ) ) {
+		if ( in_array( (int) $day->format( 'w' ), $wanted, true ) ) {
+			$dates[] = $day->format( 'Y-m-d' );
+		}
+		if ( count( $dates ) > WEEKPLAN_BATCH_LIMIT ) {
+			return new WP_Error(
+				'weekplan_too_many',
+				sprintf( '一次最多排 %d 天,当前区间超了。缩短区间或少勾几个星期几。', WEEKPLAN_BATCH_LIMIT )
+			);
+		}
+	}
+	if ( ! $dates ) {
+		return new WP_Error( 'weekplan_no_dates', '这个区间里没有勾选的星期几。' );
+	}
+
+	$table = weekplan_schedule_table();
+
+	// 已经排过的日子
+	$existing = $wpdb->get_col(
+		$wpdb->prepare(
+			"SELECT plan_date FROM $table WHERE todo_id = %d AND plan_date BETWEEN %s AND %s",
+			$todo_id,
+			$start->format( 'Y-m-d' ),
+			$end->format( 'Y-m-d' )
+		)
+	);
+
+	// 每天当前的最大 position,批量算一次,不要一天一次查询
+	$max = array();
+	foreach ( $wpdb->get_results( $wpdb->prepare(
+		"SELECT plan_date, MAX(position) AS m FROM $table WHERE plan_date BETWEEN %s AND %s GROUP BY plan_date",
+		$start->format( 'Y-m-d' ),
+		$end->format( 'Y-m-d' )
+	) ) as $row ) {
+		$max[ $row->plan_date ] = (int) $row->m;
+	}
+
+	$fresh = array_values( array_diff( $dates, $existing ) );
+	if ( ! $fresh ) {
+		return array(
+			'added'   => 0,
+			'skipped' => count( $dates ),
+		);
+	}
+
+	$values = array();
+	$args   = array();
+	foreach ( $fresh as $date ) {
+		$position = isset( $max[ $date ] ) ? $max[ $date ] + 1 : 0;
+		$max[ $date ] = $position;
+
+		$values[] = '(%d, %s, 0, %d)';
+		array_push( $args, $todo_id, $date, $position );
+	}
+
+	$sql = "INSERT INTO $table (todo_id, plan_date, done, position) VALUES " . implode( ', ', $values );
+	$wpdb->query( $wpdb->prepare( $sql, $args ) );
+
+	return array(
+		'added'   => count( $fresh ),
+		'skipped' => count( $dates ) - count( $fresh ),
+	);
+}

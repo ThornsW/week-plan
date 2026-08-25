@@ -111,7 +111,10 @@ function weekplan_render_detail( int $todo_id ): void {
 			</label>
 
 			<div class="wp-field">
-				<span class="wp-label">排期</span>
+				<span class="wp-label">
+					排期
+					<button type="button" class="wp-batch-open" title="按区间和星期几一次排多天">批量排期</button>
+				</span>
 				<p class="wp-detail-progress"><?php echo esc_html( weekplan_progress_label( $todo ) ); ?></p>
 				<?php if ( $dates ) : ?>
 					<div class="wp-datechips">

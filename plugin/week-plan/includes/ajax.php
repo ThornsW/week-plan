@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 const WEEKPLAN_NONCE = 'weekplan_action';
 
 function weekplan_register_ajax(): void {
-	$actions = array( 'add', 'move', 'remove', 'reorder', 'toggle', 'detail', 'create', 'save', 'delete', 'tag_save', 'tag_delete' );
+	$actions = array( 'add', 'move', 'remove', 'reorder', 'toggle', 'detail', 'create', 'save', 'delete', 'tag_save', 'tag_delete', 'batch' );
 	foreach ( $actions as $action ) {
 		add_action( "wp_ajax_weekplan_$action", "weekplan_ajax_$action" );
 	}
@@ -204,4 +204,19 @@ function weekplan_ajax_tag_delete(): void {
 		weekplan_ajax_reply( new WP_Error( 'weekplan_tag_delete_failed', '删除失败。' ) );
 	}
 	weekplan_ajax_reply( array() );
+}
+
+function weekplan_ajax_batch(): void {
+	weekplan_ajax_guard();
+
+	$raw = isset( $_POST['weekdays'] ) ? (array) wp_unslash( $_POST['weekdays'] ) : array();
+
+	weekplan_ajax_reply(
+		weekplan_batch_schedule(
+			weekplan_post_int( 'todo_id' ),
+			weekplan_post_text( 'from' ),
+			weekplan_post_text( 'to' ),
+			$raw
+		)
+	);
 }
