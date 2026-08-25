@@ -137,6 +137,87 @@
 	color: #b32d2e;
 }
 
+/* ---------- 左栏的二级标签分组 ---------- */
+
+/* 「待办」的组头是普通块、「未来计划」的是 flex,所以这里不用 auto 边距
+   把它推到右边 —— 那样两组的开关会一个靠右一个跟在标题后面,对不齐。 */
+.wp-split {
+	padding: 1px 8px;
+	border: 1px solid var(--wp-line);
+	border-radius: 4px;
+	background: #fff;
+	color: var(--wp-dim);
+	font-family: inherit;
+	font-size: 11.5px;
+	font-weight: 400;
+	line-height: 1.7;
+	cursor: pointer;
+}
+
+.wp-split:hover {
+	color: var(--wp-ink);
+}
+
+.wp-split[aria-pressed="true"] {
+	border-color: #c5d9ec;
+	background: #f0f6fc;
+	color: var(--wp-blue);
+}
+
+.wp-subgroup + .wp-subgroup {
+	margin-top: 4px;
+}
+
+.wp-subgroup > summary {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 3px 4px;
+	border-radius: 4px;
+	list-style: none;
+	cursor: pointer;
+	font-size: 11.5px;
+	color: var(--wp-dim);
+}
+
+.wp-subgroup > summary::-webkit-details-marker {
+	display: none;
+}
+
+.wp-subgroup > summary::before {
+	content: "▸";
+	font-size: 9px;
+	transition: transform 0.12s;
+}
+
+.wp-subgroup[open] > summary::before {
+	transform: rotate(90deg);
+}
+
+.wp-subgroup > summary:hover {
+	background: #f6f7f7;
+	color: var(--wp-ink);
+}
+
+.wp-subgroup-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.wp-subgroup-count {
+	font-variant-numeric: tabular-nums;
+}
+
+/* 条目往里缩一格,层级一眼看得出来 */
+.wp-subgroup-body {
+	margin-left: 4px;
+	padding: 3px 0 5px 9px;
+	border-left: 1px solid #f0f0f1;
+}
+
 .weekplan-empty {
 	margin: 0;
 	padding: 10px 4px;
@@ -738,6 +819,12 @@
 	border-radius: 50%;
 	background: var(--wp-tag);
 	box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--wp-tag) 70%, #000);
+}
+
+/* 二级分组里的「无标签」用空心点占位 */
+.wp-dot-none {
+	background: none;
+	box-shadow: inset 0 0 0 1px #c3c4c7;
 }
 
 .wp-tagrow-name {
