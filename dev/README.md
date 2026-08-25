@@ -33,7 +33,7 @@
 ./dev/tunnel.sh            # 开隧道，保持终端开着
 # 浏览器打开 http://localhost:8080/wp-admin/
 
-./dev/sync.sh              # 改完代码同步插件
+./dev/sync.sh              # 改完代码同步插件（自动排除 *.md）
 ./dev/server.sh debuglog   # 看 PHP 报错
 ./dev/server.sh stop       # 不开发时停掉，省内存
 ```

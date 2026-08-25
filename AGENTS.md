@@ -57,6 +57,29 @@
 - 不读取或展示生产站的 `wp-config.php`、宝塔敏感配置、数据库凭据。
 - 开发站的 `wp-config.php` 只存在于服务器 `/root/wp-dev/`，权限 600，不进本仓库。
 
+### 站点目录里什么会被公网明文读到
+
+Nginx 只把 **`.php` 结尾**的文件交给 PHP 执行；其它任何文件都当静态资源**原样发给公网**。
+所以站点目录（`wp-content/**`）里：
+
+- **不要放 `.md`、`.txt`、`.bak`、`.old`、`.sql`、`.zip` 之类的文件。** 部署脚本已加
+  `--exclude '*.md'`。2026-08-25 首次部署时漏了这条，`vendor/README.md` 一度公网可读。
+- **不要在站点目录内原地建 `.bak-<时间戳>`**，那等于把源码贴在公告栏上。备份只放
+  `/root/blog-backups/`。同日改 argon 主题时踩过，实测 `comments.php.bak-<时间戳>`
+  返回 HTTP 200 并吐出完整源码。
+- 每个 `.php` 文件开头必须有 `if ( ! defined( 'ABSPATH' ) ) { exit; }`。有它，被直接
+  访问时返回空内容；没它，可能泄露逻辑甚至被单独执行。已验证插件全部 12 个 PHP
+  文件直接访问均返回 0 字节。
+
+部署后的自查（应该只有 css 和 js 会吐出内容）：
+
+```bash
+for f in $(cd plugin/week-plan && find . -type f | sed 's|^\./||'); do
+  curl -s -o /dev/null -w "%{http_code} %{size_download} $f\n" \
+    "https://thornsw.cn/wp-content/plugins/week-plan/$f"
+done | awk '$2 != 0'
+```
+
 ## 触碰生产环境的规矩
 
 **开发阶段完全不碰生产博客。** 到部署阶段时：
