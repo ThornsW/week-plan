@@ -38,6 +38,13 @@
 ./dev/server.sh stop       # 不开发时停掉，省内存
 ```
 
+重置假数据（**会清空所有待办和排期**，只在开发站用）：
+
+```bash
+scp dev/seed.php tx-vps:/tmp/seed.php
+ssh tx-vps 'WP_CLI_PHP_ARGS="-d memory_limit=256M" wp eval-file /tmp/seed.php --path=/root/wp-dev --allow-root'
+```
+
 ## 注意
 
 - 服务器内存 1.7 GiB 无 swap，可用约 550 MiB。开发服务器进程约占 110 MB，**不开发时记得 `stop`**。
