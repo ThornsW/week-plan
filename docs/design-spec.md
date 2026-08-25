@@ -279,3 +279,15 @@ WordPress 的数据卷不进 git。开发完成后清理整个 `dev/` 目录。
 - [x] 批量排期对话框
 - [x] 右键菜单:整体顺延、删除待办
 - [x] Markdown 渲染
+
+---
+
+## 12. 上线记录
+
+2026-08-25 首次部署到生产博客 `thornsw.cn`，插件 `week-plan 0.1.0` 已启用。
+
+- 备份：`/root/blog-backups/20260825-125447-weekplan-install/`（变更前全库 4.9M + `manifest.txt`，含可直接执行的回滚命令）
+- 运维记录：`../TX_VPS/docs/ops-log.md` 2026-08-25 条目
+- 验证：前台四个页面均 HTTP 200，首页 HTML 中无任何 week-plan 字样；`?post_type=weekplan_todo` 返回普通首页、无归档、无内容泄漏；错误日志中 week-plan 相关条目 0 条
+
+生产库初始为空（0 条待办、0 条排期），旧 Memo 数据按规格不迁移。
