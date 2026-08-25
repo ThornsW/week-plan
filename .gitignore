@@ -1,0 +1,9 @@
+# 开发环境产物
+dev/*.log
+dev/wp-data/
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+*.swp
+.DS_Store
