@@ -304,3 +304,11 @@ WordPress 的数据卷不进 git。开发完成后清理整个 `dev/` 目录。
 - 验证：前台四个页面均 HTTP 200，首页 HTML 中无任何 week-plan 字样；`?post_type=weekplan_todo` 返回普通首页、无归档、无内容泄漏；错误日志中 week-plan 相关条目 0 条
 
 生产库初始为空（0 条待办、0 条排期），旧 Memo 数据按规格不迁移。
+
+2026-08-25 更新到 `week-plan 0.2.0`，内容是 5.1.1 的左栏二级标签分组。
+
+- 数据库没动：无新表、无新 option，`WEEKPLAN_DB_VERSION` 仍是 1，纯插件文件替换
+- 备份：`/root/blog-backups/20260825-211504-weekplan-tag-groups/`（变更前全库 6.0M + 变更前插件目录副本 + `manifest.txt`）
+- 运维记录：`../TX_VPS/docs/ops-log.md` 同日条目
+- 验证：服务器上 `php -l` 全过；站点目录内 `*.md` 为 0；插件 PHP 文件公网直读均返回 0 字节；前台六个页面 200、HTML 中无 week-plan 字样；错误日志无新增；`wp eval` 以管理员身份渲染后台页正常（0.2.0、两个开关、11 条待办）
+- 版本号必须跟着改：它是 `wp_enqueue_*` 的 cache-busting 参数，不改浏览器会继续用旧的 CSS/JS
