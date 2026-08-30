@@ -65,6 +65,38 @@
 		} );
 	}
 
+	/* 逾期区的「N 条」是服务端渲染的,卡片被拖走后要自己跟上;空了整块收掉。 */
+	function refreshOverdue() {
+		var box = document.querySelector( '.wp-overdue' );
+		if ( ! box ) {
+			return;
+		}
+		var count = box.querySelectorAll( '.wp-card' ).length;
+		if ( ! count ) {
+			box.remove();
+			return;
+		}
+		var label = box.querySelector( '.wp-overdue-count' );
+		if ( label ) {
+			label.textContent = count;
+		}
+	}
+
+	/*
+	 * 目标日已经有同一个待办时,服务器把两条并成一条,被拖的那张就地消失。
+	 * 不闪一下留下来的那张,看着就像刚才那一拖把待办弄丢了。
+	 */
+	function flashMerged( body, todoId ) {
+		var survivor = body.querySelector( '.wp-card[data-todo="' + todoId + '"]' );
+		if ( ! survivor ) {
+			return;
+		}
+		survivor.classList.add( 'is-merged' );
+		window.setTimeout( function () {
+			survivor.classList.remove( 'is-merged' );
+		}, 1600 );
+	}
+
 	function updateProgress( todoId, doneDays ) {
 		// 只改平铺列表里的那条;按标签分组时的克隆件由分组那块自己跟上
 		var item = document.querySelector( '.wp-flat .wp-item[data-todo="' + todoId + '"] .wp-item-meta' );
@@ -76,7 +108,17 @@
 		item.textContent = rest.join( ' · ' );
 	}
 
+	/*
+	 * 只有「某一天」那个容器才有顺序可写。逾期区也装着 .wp-card,但它是
+	 * 上周若干天的汇总,没有自己的日期 —— 早先没挡住,从逾期区拖走一张卡
+	 * 就会拿 date=undefined 去请求排序,换回一句「日期格式不对」,再把整页
+	 * 刷掉,看起来就像刚才那一拖失败了。
+	 */
 	function pushOrder( body ) {
+		if ( ! body || 'day' !== ( body.dataset && body.dataset.drop ) || ! body.dataset.date ) {
+			return;
+		}
+
 		var ids = Array.prototype.map.call(
 			body.querySelectorAll( '.wp-card' ),
 			function ( card ) {
@@ -135,7 +177,11 @@
 			el: el,
 			todoId: el.dataset.todo,
 			scheduleId: el.dataset.schedule || '',
-			date: el.dataset.date || ''
+			date: el.dataset.date || '',
+			// 「拖回侧栏 = 取消排期」只对中栏里的卡片成立。逾期区的卡片本来
+			// 就长在侧栏里,手一抖松开就等于删掉上周没做完的那条,连问都不问。
+			// 逾期卡要取消排期,走右键菜单里的「取消这一天的排期」。
+			fromDay: !! el.closest( '[data-drop="day"]' )
 		};
 		el.classList.add( 'is-dragging' );
 		event.dataTransfer.effectAllowed = 'move';
@@ -172,7 +218,7 @@
 
 		// 拖回侧栏 = 取消排期。只有从周视图里拖出来的卡片才有意义。
 		var side = event.target.closest( '[data-drop="sidebar"]' );
-		if ( side && dragged.scheduleId ) {
+		if ( side && dragged.scheduleId && dragged.fromDay ) {
 			event.preventDefault();
 			event.dataTransfer.dropEffect = 'move';
 			clearMarks();
@@ -195,7 +241,7 @@
 		}
 
 		var side = event.target.closest( '[data-drop="sidebar"]' );
-		if ( side && dragged.scheduleId ) {
+		if ( side && dragged.scheduleId && dragged.fromDay ) {
 			event.preventDefault();
 			dropOnSidebar();
 			clearMarks();
@@ -238,8 +284,10 @@
 			// 目标日已经有同一个待办,服务器把两条并成一条 —— 这里也要去重
 			if ( data.merged ) {
 				source.el.remove();
+				flashMerged( body, source.todoId );
 			}
 			refreshCounts();
+			refreshOverdue();
 			pushOrder( body );
 			if ( origin && origin !== body ) {
 				pushOrder( origin );
@@ -254,6 +302,7 @@
 		source.el.remove();
 		post( 'remove', { schedule_id: source.scheduleId } ).then( function () {
 			refreshCounts();
+			refreshOverdue();
 			if ( origin ) {
 				pushOrder( origin );
 			}

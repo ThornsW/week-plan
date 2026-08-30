@@ -490,6 +490,23 @@
 	border-radius: 4px;
 }
 
+/* 合并进已有的那一张时闪一下,交代被拖的那张去哪了 */
+@keyframes wp-merged {
+	0%, 100% { box-shadow: 0 0 0 0 rgba(34, 113, 177, 0); }
+	35%      { box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.55); }
+}
+
+.wp-card.is-merged {
+	animation: wp-merged 0.8s ease-in-out 2;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.wp-card.is-merged {
+		animation: none;
+		box-shadow: 0 0 0 3px rgba(34, 113, 177, 0.55);
+	}
+}
+
 /* 拖到侧栏 = 取消这一天的排期 */
 .weekplan-side.is-over {
 	outline: 2px dashed #b32d2e;

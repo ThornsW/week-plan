@@ -224,7 +224,7 @@ function weekplan_render_admin_page(): void {
 			<aside class="weekplan-side" data-drop="sidebar">
 				<?php if ( $overdue ) : ?>
 					<details class="wp-group wp-overdue">
-						<summary>逾期 · <?php echo count( $overdue ); ?> 条<span class="wp-hint">上周没做完</span></summary>
+						<summary>逾期 · <span class="wp-overdue-count"><?php echo count( $overdue ); ?></span> 条<span class="wp-hint">上周没做完</span></summary>
 						<div class="wp-group-body">
 							<?php foreach ( $overdue as $entry ) : ?>
 								<?php weekplan_render_card( $entry ); ?>
