@@ -304,7 +304,7 @@ CREATE TABLE {$wpdb->prefix}weekplan_schedule (
 - [x] 右键菜单:整体顺延、删除待办
 - [x] Markdown 渲染
 - [x] 左栏二级标签分组（2026-08-25）
-- [ ] 右栏便签（5.1.2，2026-10-13 开发站实现，未上线）
+- [x] 右栏便签（5.1.2，2026-10-14 随 0.3.0 上线）
 
 ---
 
@@ -325,3 +325,12 @@ CREATE TABLE {$wpdb->prefix}weekplan_schedule (
 - 运维记录：`../TX_VPS/docs/ops-log.md` 同日条目
 - 验证：服务器上 `php -l` 全过；站点目录内 `*.md` 为 0；插件 PHP 文件公网直读均返回 0 字节；前台六个页面 200、HTML 中无 week-plan 字样；错误日志无新增；`wp eval` 以管理员身份渲染后台页正常（0.2.0、两个开关、11 条待办）
 - 版本号必须跟着改：它是 `wp_enqueue_*` 的 cache-busting 参数，不改浏览器会继续用旧的 CSS/JS
+
+2026-08-31 更新到 `week-plan 0.2.1`，修掉逾期卡拖拽会静默删掉排期（见 6.1）。纯插件文件替换，未经开发站验证。备份、验证和丢失的那条排期见 `../TX_VPS/docs/ops-log.md` 同日条目。
+
+2026-10-14 更新到 `week-plan 0.3.0`，内容是 5.1.2 的右栏便签。
+
+- 数据库：部署不写库；便签存 option `weekplan_memo`，第一次打字时才创建。无新表，`WEEKPLAN_DB_VERSION` 仍是 1
+- 备份：`/root/blog-backups/20261014-014743-weekplan-memo/`（变更前全库 6.3M + 变更前插件目录 tar + `manifest.txt`）
+- 运维记录：`../TX_VPS/docs/ops-log.md` 同日条目
+- 验证：上线前在开发站浏览器实测；上线后 `php -l` 全过、管理员渲染后台页便签在位且资源版本 0.3.0、插件 PHP 公网直读 0 字节、前台 200 且无 week-plan 字样、错误日志无相关新增
