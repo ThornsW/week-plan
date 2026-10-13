@@ -30,6 +30,7 @@ require_once WEEKPLAN_DIR . 'includes/markdown.php';
 require_once WEEKPLAN_DIR . 'includes/ajax.php';
 require_once WEEKPLAN_DIR . 'includes/admin.php';
 require_once WEEKPLAN_DIR . 'includes/detail.php';
+require_once WEEKPLAN_DIR . 'includes/memo.php';
 
 /**
  * 内容类型和分类法在前后台都要注册。
