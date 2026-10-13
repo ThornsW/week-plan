@@ -19,7 +19,8 @@ week-plan 把这两件事分开：
 ## 文档
 
 - [设计规格](docs/design-spec.md) —— 35 个已确认的设计决定及其理由，实现以此为准
-- [开发环境](dev/README.md) —— 怎么起本地开发用的 WordPress
+- [开发环境](dev/README.md) —— 如何使用服务器上的隔离 WordPress 开发站
+- [生产操作](docs/production-operations.md) —— 部署、备份、验证和公网文件边界
 
 ## 目录
 

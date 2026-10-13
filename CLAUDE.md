@@ -1,0 +1,3 @@
+# week-plan
+
+@AGENTS.md
