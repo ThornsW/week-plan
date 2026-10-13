@@ -1,99 +1,47 @@
-# AGENTS.md
+# week-plan 仓库指南
 
-## 项目定位
+## 项目
 
-`week-plan` 是一个 WordPress 插件，把待办按天排进一周的计划表。界面只在 wp-admin 后台，单用户，最终部署在个人博客服务器 `thornsw.cn` 上。
+`week-plan` 是一个单用户 WordPress 插件，把待办按天排进周计划表。界面只在
+`wp-admin` 后台出现，生产站点为 `thornsw.cn`。插件源码位于
+`plugin/week-plan/`，当前源码版本是 0.3.0；最近一次生产部署是 0.2.1
+（2026-08-31，见 `../TX_VPS/docs/ops-log.md`）。
 
-设计决定全部记录在 [docs/design-spec.md](docs/design-spec.md)，共 35 条。**实现以规格文档为准；实现与文档冲突时，先改文档再改代码。**
+旧的 `../Memo/` 已冻结，与本项目没有共享代码或数据迁移。服务器事实和运维记录归
+`../TX_VPS/` 管理；文档可能过期，影响生产操作的状态应当在操作前只读核实。
 
-## 项目边界
+## 按需读取
 
-- 本项目只放插件源码、设计文档和开发环境脚本。
-- 博客服务器的运维记录属于相邻项目 `../TX_VPS/`，不在这里重复。涉及服务器状态的事实以那边的 `docs/server-inventory.md` 为准，但**记录可能过期，重要信息必须当场只读核实**。
-- 旧的 Memo 桌面应用在 `../Memo/`，已冻结。两者无共享代码、无数据迁移，不要从那里复制实现。
+- 修改功能、交互、数据模型或产品范围时，读取
+  [设计规格](docs/design-spec.md)。其中 35 条决定是实现依据；需要改变决定时同步更新规格。
+- 启动、同步或排查隔离开发站时，读取 [开发环境](dev/README.md)。
+- 准备生产部署、备份或线上检查时，读取
+  [生产操作](docs/production-operations.md) 和 `../TX_VPS/AGENTS.md`。
 
-## 核心约定
+例行小改不必通读全部文档。
 
-命名一旦定下不再改动，文件夹名、插件名、线上部署目录名三者必须完全一致：
+## 实现约束
 
-| 项目 | 值 |
-|---|---|
-| 插件目录 / 线上部署路径 | `wp-content/plugins/week-plan/` |
-| 插件主文件 | `week-plan.php` |
-| PHP 函数、常量前缀 | `weekplan_` —— **不可用 `wp_`**，那是 WordPress 核心保留前缀 |
-| 待办内容类型 | `weekplan_todo` |
-| 标签分类 | `weekplan_tag` —— **必须是自有分类**，复用博客文章标签会让待办标签出现在公开页面 |
-| 排期表 | `{$wpdb->prefix}weekplan_schedule` |
+- 插件目录和主文件固定为 `week-plan/`、`week-plan.php`；PHP 标识符使用
+  `weekplan_`，不得占用 WordPress 的 `wp_` 前缀。
+- 内容类型 `weekplan_todo` 和自有分类 `weekplan_tag` 在 `init` 上注册；界面钩子只在
+  后台注册。不要增加前台入口或复用博客文章标签。
+- 每个写操作校验 nonce 和 `manage_options`。SQL 使用 `$wpdb->prepare()`；表名通过
+  `weekplan_schedule_table()` 获取。
+- 改排期表结构时同时更新 `WEEKPLAN_DB_VERSION`，并通过
+  `weekplan_maybe_upgrade_schema()` 升级。保留 `dbDelta()` 要求的 SQL 格式。
+- 每个 PHP 入口先检查 `ABSPATH`。不要把 Markdown、备份、SQL、压缩包或其他可被
+  Nginx 原样返回的文件部署进 `wp-content`。
+- 前端使用原生 HTML、CSS 和 JavaScript，不引入框架、npm 或构建步骤。
 
-## 代码规范
+## 验证与环境边界
 
-- 界面相关的钩子一律只在后台注册。内容类型和分类法在 `init` 上无条件注册（否则 wp-cli 和后台之外的写入会被拒绝），其余一切走 `is_admin()` 守卫。插件不注册任何前台钩子，博客前台不受它影响。
-- 每个写操作校验 nonce 和 `manage_options` 权限。
-- 所有 SQL 走 `$wpdb->prepare()`；自建表的表名用 `weekplan_schedule_table()` 取，不要硬编码前缀。
-- 前端不引框架、不引构建步骤。原生 HTML + CSS + JavaScript，浏览器原生拖拽 API。
-- 改自建表结构必须同时改 `WEEKPLAN_DB_VERSION`，升级逻辑走 `weekplan_maybe_upgrade_schema()`。
-- `dbDelta()` 对 SQL 格式极其挑剔：字段名与类型之间两个空格、用 `KEY` 而非 `INDEX`、`PRIMARY KEY` 后两个空格。写错的表现是每次加载都重复执行 ALTER，不会报错。
+根据改动范围检查：PHP 改动做语法检查，交互改动在隔离开发站验证，数据库改动验证
+安装与升级路径，前台相关边界验证博客页面不受影响。文档改动只需检查链接和差异。
 
-## 开发流程
+本机不安装 WordPress、PHP 或数据库；开发站使用独立目录和数据库，不接触生产站。
+实现任务需要远端验证时，可以启动、同步、检查、修复并重试，无需逐步确认；结束后停止
+开发服务器。生产部署、激活和数据变更必须有用户明确授权，并遵守生产操作文档中的备份、
+验证和记录要求。
 
-开发用的 WordPress 跑在博客服务器上，与生产博客完全隔离，见 [dev/README.md](dev/README.md)。
-
-```bash
-./dev/server.sh start   # 启动远端开发服务器
-./dev/tunnel.sh         # 开隧道，浏览器访问 http://localhost:8080/wp-admin/
-./dev/sync.sh           # 同步插件代码
-./dev/server.sh debuglog # 看 PHP 报错
-./dev/server.sh stop     # 不开发时停掉
-```
-
-服务器内存 1.7 GiB 无 swap，可用约 550 MiB。**开发服务器不用时必须停掉。**
-
-## 安全边界
-
-沿用 `../TX_VPS/AGENTS.md` 的规矩：
-
-- 不把服务器密码、数据库密码、面板密码、token、SSL 私钥写入项目文件、脚本、日志或回复。
-- 用户在会话中提供的凭据只用于本次授权操作，不沉淀到文件。
-- 不读取或展示生产站的 `wp-config.php`、宝塔敏感配置、数据库凭据。
-- 开发站的 `wp-config.php` 只存在于服务器 `/root/wp-dev/`，权限 600，不进本仓库。
-
-### 站点目录里什么会被公网明文读到
-
-Nginx 只把 **`.php` 结尾**的文件交给 PHP 执行；其它任何文件都当静态资源**原样发给公网**。
-所以站点目录（`wp-content/**`）里：
-
-- **不要放 `.md`、`.txt`、`.bak`、`.old`、`.sql`、`.zip` 之类的文件。** 部署脚本已加
-  `--exclude '*.md'`。2026-08-25 首次部署时漏了这条，`vendor/README.md` 一度公网可读。
-- **不要在站点目录内原地建 `.bak-<时间戳>`**，那等于把源码贴在公告栏上。备份只放
-  `/root/blog-backups/`。同日改 argon 主题时踩过，实测 `comments.php.bak-<时间戳>`
-  返回 HTTP 200 并吐出完整源码。
-- 每个 `.php` 文件开头必须有 `if ( ! defined( 'ABSPATH' ) ) { exit; }`。有它，被直接
-  访问时返回空内容；没它，可能泄露逻辑甚至被单独执行。已验证插件全部 12 个 PHP
-  文件直接访问均返回 0 字节。
-
-部署后的自查（应该只有 css 和 js 会吐出内容）：
-
-```bash
-for f in $(cd plugin/week-plan && find . -type f | sed 's|^\./||'); do
-  curl -s -o /dev/null -w "%{http_code} %{size_download} $f\n" \
-    "https://thornsw.cn/wp-content/plugins/week-plan/$f"
-done | awk '$2 != 0'
-```
-
-## 触碰生产环境的规矩
-
-**开发阶段完全不碰生产博客。** 到部署阶段时：
-
-1. 先只读检查实时状态；实时状态与文档冲突，以实时状态为准。
-2. 部署前 `wp db export` 备份生产数据库。
-3. 一次只做一个可验证的小变更，变更后检查 HTTP 响应和错误日志。
-4. 把结论、变更、验证结果和回滚方式写进 `../TX_VPS/docs/ops-log.md`。
-
-线上写操作、激活插件、任何安全相关变更，都需要用户明确同意。
-
-## 沟通
-
-- 默认中文。
-- 先给结论，再给证据和可执行步骤。
-- 避免不必要的技术术语；确实需要时先解释一句再用。
-- 完成变更后说明做了什么、验证了什么、还剩什么风险。
+不要把凭据、私钥、token、`wp-config.php` 内容或服务器敏感配置写入仓库、日志或回复。
