@@ -12,7 +12,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 const WEEKPLAN_NONCE = 'weekplan_action';
 
 function weekplan_register_ajax(): void {
-	$actions = array( 'add', 'move', 'remove', 'reorder', 'toggle', 'detail', 'create', 'save', 'delete', 'tag_save', 'tag_delete', 'batch', 'shift', 'preview' );
+	$actions = array( 'add', 'move', 'remove', 'reorder', 'toggle', 'detail', 'create', 'save', 'delete', 'tag_save', 'tag_delete', 'batch', 'shift', 'preview', 'memo' );
 	foreach ( $actions as $action ) {
 		add_action( "wp_ajax_weekplan_$action", "weekplan_ajax_$action" );
 	}
@@ -234,4 +234,15 @@ function weekplan_ajax_preview(): void {
 
 	$raw = isset( $_POST['value'] ) ? wp_unslash( $_POST['value'] ) : '';
 	weekplan_ajax_reply( array( 'html' => weekplan_render_markdown( (string) $raw ) ) );
+}
+
+/* ---------- 便签 ---------- */
+
+function weekplan_ajax_memo(): void {
+	weekplan_ajax_guard();
+
+	// 便签是 HTML,不能过 sanitize_text_field;白名单过滤在 weekplan_save_memo 里
+	$raw = isset( $_POST['value'] ) ? wp_unslash( $_POST['value'] ) : '';
+	weekplan_save_memo( (string) $raw );
+	weekplan_ajax_reply( array() );
 }

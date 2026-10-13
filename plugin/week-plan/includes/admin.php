@@ -296,9 +296,12 @@ function weekplan_render_admin_page(): void {
 				<?php endforeach; ?>
 			</main>
 
-			<aside class="weekplan-detail" id="weekplan-detail">
-				<?php weekplan_render_detail_empty(); ?>
-			</aside>
+			<div class="weekplan-right">
+				<aside class="weekplan-detail" id="weekplan-detail">
+					<?php weekplan_render_detail_empty(); ?>
+				</aside>
+				<?php weekplan_render_memo(); ?>
+			</div>
 		</div>
 
 		<?php weekplan_render_batch_dialog(); ?>

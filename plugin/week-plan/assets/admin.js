@@ -1256,3 +1256,158 @@
 
 	renderAll();
 }() );
+
+/*
+ * 右栏底部的便签。
+ *
+ * 编辑器是原生 contenteditable,格式按钮走 document.execCommand —— 它被标成
+ * 过时,但各家浏览器都还支持,而且是不引库就能做所见即所得的唯一办法。
+ *
+ * 停手 0.7 秒自动保存,失焦和关页面时再补一次。同一时间只发一个请求:
+ * 生产上 PHP-FPM 是并发的,两个保存请求赛跑,旧内容可能后到、把新内容盖掉。
+ */
+( function () {
+	'use strict';
+
+	var config = window.weekplanData || {};
+	var memo = document.getElementById( 'weekplan-memo' );
+	if ( ! memo ) {
+		return;
+	}
+
+	var editor = memo.querySelector( '.wp-memo-body' );
+	var status = memo.querySelector( '.wp-memo-status' );
+	var buttons = memo.querySelectorAll( '.wp-memo-tools button' );
+
+	var timer = null;
+	var statusTimer = null;
+	var dirty = false;
+	var inflight = false;
+
+	function body() {
+		var data = new URLSearchParams();
+		data.set( 'action', 'weekplan_memo' );
+		data.set( 'nonce', config.nonce );
+		data.set( 'value', editor.innerHTML );
+		return data;
+	}
+
+	function say( text, fade ) {
+		window.clearTimeout( statusTimer );
+		status.textContent = text;
+		if ( fade ) {
+			statusTimer = window.setTimeout( function () {
+				status.textContent = '';
+			}, 1500 );
+		}
+	}
+
+	function flush() {
+		window.clearTimeout( timer );
+		timer = null;
+		if ( ! dirty || inflight ) {
+			return;
+		}
+
+		dirty = false;
+		inflight = true;
+		say( '保存中…' );
+
+		fetch( config.ajaxUrl, {
+			method: 'POST',
+			credentials: 'same-origin',
+			body: body()
+		} ).then( function ( response ) {
+			return response.json();
+		} ).then( function ( json ) {
+			if ( ! json || ! json.success ) {
+				throw new Error( ( json && json.data && json.data.message ) || '请求失败' );
+			}
+			inflight = false;
+			// 请求在路上时又改过,接着存最新的
+			if ( dirty ) {
+				flush();
+			} else {
+				say( '已保存', true );
+			}
+		} ).catch( function ( error ) {
+			inflight = false;
+			dirty = true;
+			window.console && console.error( '[week-plan]', error );
+			say( '没保存成功,再改一下会重试' );
+		} );
+	}
+
+	function changed() {
+		editor.classList.toggle( 'is-empty', '' === editor.textContent.trim() && ! editor.querySelector( 'li' ) );
+		dirty = true;
+		window.clearTimeout( timer );
+		timer = window.setTimeout( flush, 700 );
+	}
+
+	function syncButtons() {
+		var sel = document.getSelection();
+		var inside = sel && sel.rangeCount && editor.contains( sel.anchorNode );
+		buttons.forEach( function ( button ) {
+			var on = false;
+			if ( inside ) {
+				try {
+					on = document.queryCommandState( button.dataset.cmd );
+				} catch ( e ) {}
+			}
+			button.classList.toggle( 'is-on', on );
+		} );
+	}
+
+	editor.addEventListener( 'focus', function () {
+		// 回车另起一行时用 <div>,不让各家浏览器各用各的
+		document.execCommand( 'defaultParagraphSeparator', false, 'div' );
+	} );
+
+	editor.addEventListener( 'input', changed );
+	editor.addEventListener( 'blur', flush );
+	document.addEventListener( 'selectionchange', syncButtons );
+
+	// 按下时不抢焦点,选区还留在编辑器里
+	memo.querySelector( '.wp-memo-tools' ).addEventListener( 'mousedown', function ( event ) {
+		event.preventDefault();
+	} );
+
+	memo.querySelector( '.wp-memo-tools' ).addEventListener( 'click', function ( event ) {
+		var button = event.target.closest( 'button[data-cmd]' );
+		if ( ! button ) {
+			return;
+		}
+		if ( document.activeElement !== editor ) {
+			editor.focus();
+		}
+		document.execCommand( button.dataset.cmd, false, null );
+		syncButtons();
+		changed();
+	} );
+
+	// 粘贴只要文字:别处带来的颜色、字号、图片都不进便签
+	editor.addEventListener( 'paste', function ( event ) {
+		event.preventDefault();
+		var text = ( event.clipboardData || window.clipboardData ).getData( 'text/plain' );
+		if ( text ) {
+			document.execCommand( 'insertText', false, text );
+		}
+	} );
+
+	// 卡片拖过来会把待办 id 当文字塞进来,图片拖进来会变成内嵌图。一律不收
+	editor.addEventListener( 'dragover', function ( event ) {
+		event.preventDefault();
+		event.dataTransfer.dropEffect = 'none';
+	} );
+	editor.addEventListener( 'drop', function ( event ) {
+		event.preventDefault();
+	} );
+
+	// 停手不到 0.7 秒就关页面,用 sendBeacon 把最后一笔送出去
+	window.addEventListener( 'pagehide', function () {
+		if ( dirty && navigator.sendBeacon ) {
+			navigator.sendBeacon( config.ajaxUrl, body() );
+		}
+	} );
+}() );

@@ -75,10 +75,17 @@
 }
 
 .weekplan-side,
-.weekplan-detail {
+.weekplan-detail,
+.weekplan-right {
 	display: flex;
 	flex-direction: column;
 	gap: 10px;
+}
+
+/* 右栏 = 详情 + 便签。详情的内容随选中的待办整块替换,便签不在里面,所以不受影响 */
+.weekplan-right {
+	gap: 16px;
+	min-width: 0;
 }
 
 .weekplan-detail,
@@ -538,7 +545,7 @@
 	.weekplan-layout {
 		grid-template-columns: 260px minmax(0, 1fr);
 	}
-	.weekplan-detail {
+	.weekplan-right {
 		grid-column: 1 / -1;
 	}
 }
@@ -1207,4 +1214,119 @@
 	padding: 3px 8px;
 	border: 1px solid var(--wp-line);
 	font-size: 12px;
+}
+
+/* ---------- 便签 ---------- */
+
+/*
+ * 照微软便签的深色模式:彩色顶栏、深灰底、白字、底部一排格式按钮。
+ * 整个后台都是浅色,只有这一块是深的 —— 它和周计划无关,翻周也不动,
+ * 看起来就该像贴在旁边的一张纸。
+ */
+.wp-memo {
+	--wp-memo-bar: #6ccb5f;
+	--wp-memo-bg: #333;
+	--wp-memo-ink: #ececec;
+	--wp-memo-dim: #9a9a9a;
+
+	display: flex;
+	flex-direction: column;
+	border-radius: 6px;
+	overflow: hidden;
+	background: var(--wp-memo-bg);
+	color: var(--wp-memo-ink);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+}
+
+.wp-memo-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 12px;
+	background: var(--wp-memo-bar);
+	color: #1d2327;
+	font-size: 12px;
+	font-weight: 700;
+	letter-spacing: 0.03em;
+}
+
+.wp-memo-status {
+	margin-left: auto;
+	font-weight: 400;
+	opacity: 0.75;
+}
+
+.wp-memo-body {
+	min-height: 260px;
+	max-height: 70vh;
+	overflow-y: auto;
+	padding: 10px 14px;
+	font-size: 13px;
+	line-height: 1.7;
+	outline: none;
+	word-break: break-word;
+}
+
+.wp-memo-body.is-empty::before {
+	content: attr(data-placeholder);
+	color: var(--wp-memo-dim);
+	pointer-events: none;
+}
+
+.wp-memo-body ul,
+.wp-memo-body ol {
+	margin: 0 0 0 1.3em;
+	padding: 0;
+}
+
+.wp-memo-body ul {
+	list-style: disc;
+}
+
+.wp-memo-body ol {
+	list-style: decimal;
+}
+
+.wp-memo-body li {
+	margin: 0;
+}
+
+.wp-memo-body p {
+	margin: 0;
+}
+
+.wp-memo-tools {
+	display: flex;
+	gap: 4px;
+	padding: 6px 8px;
+	border-top: 1px solid #444;
+}
+
+.wp-memo-tools button {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 30px;
+	height: 28px;
+	padding: 0;
+	border: 0;
+	border-radius: 3px;
+	background: none;
+	color: #c8c8c8;
+	font-size: 14px;
+	cursor: pointer;
+}
+
+.wp-memo-tools svg {
+	fill: currentColor;
+}
+
+.wp-memo-tools button:hover {
+	background: #444;
+	color: #fff;
+}
+
+.wp-memo-tools button.is-on {
+	background: #4d4d4d;
+	color: #fff;
 }
